@@ -41,11 +41,10 @@
 <div class="modal" id="settings-modal" hidden>
   <div class="modal-box">
     <h2>设置</h2>
-    <label>DeepSeek API Key
-      <input type="password" id="api-key-input" placeholder="sk-…（仅保存在本机浏览器）" autocomplete="off">
+    <label>DeepSeek API Key（可选，高级用户直连）
+      <input type="password" id="api-key-input" placeholder="sk-…（默认走平台预置通道，无需填写）" autocomplete="off">
     </label>
-    <p class="hint">「随便聊聊」需要调用 DeepSeek 接口。Key 只保存在你浏览器的 localStorage，
-    不上传、不写日志。在 <a href="https://platform.deepseek.com" target="_blank" rel="noopener">platform.deepseek.com</a> 申请。</p>
+    <p class="hint">「随便聊聊」默认使用平台预置通道（限流 20 次/时/IP）。填入自己的 DeepSeek Key 可直连不限流——Key 只保存在你浏览器的 localStorage，不上传、不写日志。</p>
     <div class="modal-btns">
       <button class="btn-ghost" id="btn-cancel">取消</button>
       <button class="btn-primary" id="btn-save">保存</button>

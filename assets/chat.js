@@ -59,19 +59,33 @@ function saveHist() {
 
 /* ===== DeepSeek调用(用户key) ===== */
 async function deepseek(messages) {
-  const key = localStorage.getItem(KEY_LS);
-  if (!key) throw new Error("NOKEY");
-  const body = {
-    model: "deepseek-chat", temperature: 0.4,
-    messages: [{ role: "system", content: sysPrompt + `\n当前阶段：${stageName()}（${stage}）` },
-               ...messages],
-  };
-  const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
-    body: JSON.stringify(body),
-  });
+  /* 1019晚: 默认走本站代理(平台预置key, 限流20次/时/IP);
+     高级用户可在首页⚙填自己的key直连(不限流) */
+  const ownKey = localStorage.getItem(KEY_LS);
+  let r;
+  if (ownKey) {
+    r = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + ownKey },
+      body: JSON.stringify({
+        model: "deepseek-chat", temperature: 0.4,
+        messages: [{ role: "system", content: sysPrompt + `\n当前阶段：${stageName()}（${stage}）` },
+                   ...messages],
+      }),
+    });
+  } else {
+    r = await fetch("/api/me/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [{ role: "system", content: sysPrompt + `\n当前阶段：${stageName()}（${stage}）` },
+                   ...messages],
+      }),
+    });
+  }
   if (r.status === 401) throw new Error("KEYBAD");
+  if (r.status === 429) throw new Error("RATE");
   if (!r.ok) throw new Error("API" + r.status);
   return (await r.json()).choices[0].message.content;
 }
@@ -80,10 +94,6 @@ async function send() {
   const q = $("chat-input").value.trim();
   if (!q) return;
   $("chat-input").value = "";
-  if (!localStorage.getItem(KEY_LS)) {
-    bubble("ai", "先点首页右上角 ⚙ 填入你的 DeepSeek API Key，然后回来继续聊～");
-    return;
-  }
   history.push({ role: "user", content: q });
   bubble("user", q);
   const pend = bubble("ai", "…");
@@ -96,6 +106,7 @@ async function send() {
   } catch (e) {
     pend.textContent = e.message === "KEYBAD" ? "⚠ API Key 无效，请到首页⚙重新填写"
                      : e.message === "NOKEY" ? "⚠ 请先在首页⚙填写 DeepSeek API Key"
+                     : e.message === "RATE" ? "⚠ 当前使用人数较多，请稍后再试，或在首页⚙填入自己的 DeepSeek Key"
                      : "⚠ 网络异常：" + e.message + "，请重试";
   }
 }
