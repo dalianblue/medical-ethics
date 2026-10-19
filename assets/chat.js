@@ -34,6 +34,50 @@ const sysPrompt = `你是医学研究伦理申请的引导员，帮助临床研�
 - 用户粘贴已有方案时，直接提取要素并汇报"我已从你的方案中提取到：…"
 - 永远不给确定性医学结论，提醒最终须经伦理委员会审查`;
 
+
+/* ===== 风险提示库注入(蒸馏自second-brain 1.2万卡, 2026-10-19) ===== */
+function matchRiskTopics(text) {
+  const AXES = {
+    "全麻/全身麻醉": /全身麻醉|全麻|丙泊酚|七氟醚|插管|拔管|机械通气/,
+    "椎管内麻醉": /椎管内|硬膜外|腰麻|蛛网膜下/,
+    "神经阻滞": /神经阻滞|臂丛|腰丛|骶麻|骶管|髂筋膜/,
+    "镇静": /镇静|无痛胃肠镜|右美托咪定|咪达唑仑/,
+    "老年": /老年|高龄/,
+    "儿童": /儿童|小儿|婴幼儿|患儿/,
+    "孕妇/产科": /孕妇|产科|剖宫产|妊娠/,
+    "腹腔镜/气腹": /腹腔镜|气腹/,
+    "日间手术/快速康复": /日间手术|快速康复|ERAS/,
+    "术后疼痛/镇痛": /术后镇痛|镇痛泵|多模式镇痛|术后疼痛/,
+    "术后恶心呕吐": /恶心呕吐|PONV/,
+    "术后谵妄/认知": /谵妄|认知功能/,
+    "苏醒期躁动": /躁动/,
+    "低血压/循环": /低血压|心动过缓|循环抑制/,
+    "呼吸抑制/低氧": /呼吸抑制|低氧血症/,
+    "体温/寒战": /低体温|寒战|保温/,
+    "过敏/类过敏": /过敏/,
+    "困难气道/误吸": /困难气道|误吸|饱胃/,
+  };
+  const out = [];
+  for (const [axis, pat] of Object.entries(AXES)) {
+    if (pat.test(text) && window.RISK_KB && window.RISK_KB[axis]) out.push(axis);
+  }
+  return out.slice(0, 4);
+}
+function riskContextBlock(text) {
+  const topics = matchRiskTopics(text);
+  if (!topics.length) return "";
+  let s = "\n【风险提示库命中】该研究涉及: " + topics.join("、") + "\n";
+  s += "生成知情同意书风险章节时, 逐条引用下列证据条目(含发生率与来源), 禁止用'轻微不便'类模板句; 未列出的风险不得编造:\n";
+  for (const tp of topics) {
+    s += "\n■ " + tp + ":\n";
+    for (const r of window.RISK_KB[tp].risks.slice(0, 6)) {
+      s += "- " + r.name + "（" + r.freq + "）" + (r.detail ? "：" + r.detail : "") + (r.src.length ? " [源:" + r.src[0] + "]" : "") + "\n";
+    }
+    s += "患者话术参考: " + window.RISK_KB[tp].lines.slice(0, 2).join(" ") + "\n";
+  }
+  return s;
+}
+
 function stageIdx() { return STAGES.findIndex(s => s.id === stage); }
 function stageName() { return STAGES[stageIdx()].name; }
 function nextStage() {
@@ -83,7 +127,7 @@ async function deepseek(messages) {
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + ownKey },
       body: JSON.stringify({
         model: "deepseek-chat", temperature: 0.4,
-        messages: [{ role: "system", content: sysPrompt + `\n当前阶段：${stageName()}（${stage}）` },
+        messages: [{ role: "system", content: sysPrompt + `\n当前阶段：${stageName()}（${stage}）` + riskContextBlock(messages.map(m => m.content).join(" ")) },
                    ...messages],
       }),
     });
@@ -93,7 +137,7 @@ async function deepseek(messages) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "deepseek-chat",
-        messages: [{ role: "system", content: sysPrompt + `\n当前阶段：${stageName()}（${stage}）` },
+        messages: [{ role: "system", content: sysPrompt + `\n当前阶段：${stageName()}（${stage}）` + riskContextBlock(messages.map(m => m.content).join(" ")) },
                    ...messages],
       }),
     });
