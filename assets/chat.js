@@ -175,11 +175,35 @@ async function send() {
 function refreshGenBar() {
   $("gen-bar").hidden = stage !== "generate";
 }
-const GEN_SYS = `你是医学研究伦理文书生成器。根据对话历史中收集的研究信息, 生成:
-1) 研究方案(章节: 研究背景/研究目的/研究设计/纳入排除标准/样本量与统计/知情同意)
-2) 知情同意书(章节: 为什么做这项研究/参加需要做什么/风险与不适/自愿参加与退出/隐私保护/联系人/同意声明签名栏)
-要求: 中文, 医学规范表述; 风险章节若上下文含风险提示库条目须逐条引用发生率与来源; 未收集到的信息用【待补充】标注, 不得编造;
-输出JSON: {"protocol_md": "研究方案全文markdown", "consent_md": "知情同意书全文markdown", "answers_summary": {"title":"研究题目","design":"设计类型","sample_size":"样本量"}}`;
+const GEN_SYS = `你是医学研究伦理文书生成器，产出**直接可提交伦理委员会的完整文书**（参照三甲医院IIT过会方案标准），不是提纲。
+
+【输出格式——严格遵守】
+第一行必须是 ===PROTOCOL===
+其后是研究方案全文(markdown)
+然后一行必须是 ===CONSENT===
+其后是知情同意书全文(markdown)
+除以上内容外不输出任何解释或代码块围栏。
+
+【研究方案章节(每章达标)】
+# 研究方案
+## 一、研究背景 (≥300字: 临床问题+现状+研究缺口+切入点)
+## 二、研究目的 (主要+次要, 逐条)
+## 三、研究过程
+### 3.1 研究方法 (设计详述/对象来源/分组随机化/盲法/干预细节:麻醉方式药物剂量流程/样本量估算:公式参数每个数值来源与计算过程/统计方法)
+### 3.2 研究步骤 (筛选到随访时间线, 逐访视窗)
+### 3.3 数据存储 (采集工具/存储位置/加密/期限/脱标识/权限)
+### 3.4 研究路线图 (分阶段)
+## 四、研究的风险和获益；补偿、赔偿措施；受试者保护措施
+### （一）风险和获益 (逐条风险+防控+获益; 上下文有风险库条目则逐条引用发生率与来源)
+### （二）补偿、赔偿措施
+### （三）隐私保护、风险控制和安全保护
+## 五、质量控制与研究监测 (依从性/数据核查/中止标准)
+## 六、知情同意 (方式/执行人/特殊人群; 豁免则完整论证)
+## 七、主要研究者与参加人员 (【待补充】标注)
+
+【知情同意书章节】为什么做这项研究/参加需要做什么/风险与不适(逐条+发生率+来源)/获益/自愿参加与退出/隐私保护/补偿与赔偿/联系人/同意声明签名栏
+
+【硬性要求】对话已收集信息全部写入并展开(样本量计算写全参数过程); 未收集的用【待补充】标注; 长度不设上限, 目标2500-4500字。`;
 
 async function generateDocs() {
   const btn = $("btn-gen");
@@ -210,11 +234,11 @@ async function generateDocs() {
     if (!r.ok) throw new Error("API" + r.status);
     let data = await r.json();
     let txt = data.choices[0].message.content;
-    let docs = tryParseDocs(txt);
+    let docs = parseSections(txt);
     if (!docs) {
       /* 截断类失败: 自动重试一次(要求精简输出) */
       bubble("ai", "第一次生成不完整，正在自动重试（精简模式）…");
-      body.messages[0] = { role: "system", content: GEN_SYS + "\n注意: 上次输出过长被截断。本次protocol_md和consent_md合计控制在1500字以内, 只保留必需内容。" + riskContextBlock(history.map(m => m.content).join(" ")) };
+      body.messages[0] = { role: "system", content: GEN_SYS + "\n注意: 上次输出被截断。本次保留全部章节结构, 压缩各章篇幅(每章2-3句核心), 优先保证两个分隔符标记完整。" + riskContextBlock(history.map(m => m.content).join(" ")) };
       r = await fetch(key ? "https://api.deepseek.com/v1/chat/completions" : "/api/me/", {
         method: "POST",
         headers: key ? { "Content-Type": "application/json", "Authorization": "Bearer " + key }
@@ -224,15 +248,13 @@ async function generateDocs() {
       if (!r.ok) throw new Error("API" + r.status);
       data = await r.json();
       txt = data.choices[0].message.content;
-      docs = tryParseDocs(txt);
+      docs = parseSections(txt);
       if (!docs) throw new Error("两次生成均不完整");
     }
-    /* docs解析移至tryParseDocs */
-    downloadMd("研究方案.md", docs.protocol_md || "");
+    /* docs解析见parseSections */
+    downloadMd("研究方案.md", docs.protocol || "");
     setTimeout(() => downloadMd("知情同意书.md", docs.consent_md || ""), 400);
-    if (docs.answers_summary) {
-      setTimeout(() => downloadMd("研究要素.json", JSON.stringify(docs.answers_summary, null, 2)), 800);
-    }
+
     btn.textContent = "✅ 已生成（若未弹出下载请检查浏览器设置）";
   } catch (e) {
     btn.textContent = "⚠ " + (e.message || "失败") + "，请重试";
@@ -240,26 +262,15 @@ async function generateDocs() {
     btn.disabled = false;
   }
 }
-function tryParseDocs(txt) {
-  const m = txt.match(/\{[\s\S]*\}/) || txt.match(/\{[\s\S]*/);
-  if (!m) return null;
-  try { return JSON.parse(m[0]); } catch (e) {}
-  /* 粗补截断: 数{}[]配对补齐 */
-  let s = m[0].trim().replace(/,\s*$/, '');
-  const ob = (s.match(/\{/g) || []).length, cb = (s.match(/\}/g) || []).length;
-  const ab = (s.match(/\[/g) || []).length, abk = (s.match(/\]/g) || []).length;
-  const candidates = [
-    s + '"}',
-    s + '"}]',
-    s + '"}]}' ,
-    s + ']' + '}'.repeat(Math.max(0, ob - cb)),
-    s + '}'.repeat(Math.max(0, ob - cb)),
-    s.replace(/\"[^\"]*$/, '') + '"}' ,
-  ];
-  for (const c of candidates) {
-    try { return JSON.parse(c); } catch (e) {}
+function parseSections(txt) {
+  txt = String(txt).replace(/```[a-z]*\n?/gi, "").replace(/```/g, "");
+  const pm = txt.match(/=+\s*PROTOCOL\s*=+\n?([\s\S]*?)(?:=+\s*CONSENT\s*=+|$)/i);
+  const cm = txt.match(/=+\s*CONSENT\s*=+\n?([\s\S]*)/i);
+  if (!pm && !cm) {
+    if (txt.indexOf("研究方案") !== -1 && txt.length > 800) return { protocol: txt.trim(), consent: "" };
+    return null;
   }
-  return null;
+  return { protocol: ((pm && pm[1]) || "").trim(), consent: ((cm && cm[1]) || "").trim() };
 }
 function isWeixin() { return /MicroMessenger/i.test(navigator.userAgent); }
 function downloadMd(name, text) {
