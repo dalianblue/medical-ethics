@@ -92,8 +92,9 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 function renderMd(text) {
-  /* 先转义HTML防XSS, 再用marked渲染markdown */
-  return marked.parse(escapeHtml(text));
+  /* 先转义HTML防XSS, 再用marked渲染markdown。
+     单个波浪号保护为实体: 防GFM把"3~6分...1~2分"两个~误配对成删除线(medical数字范围高频) */
+  return marked.parse(escapeHtml(text).replace(/~(?!~)/g, "&#732;"));
 }
 function bubble(role, text, isHtml) {
   const row = document.createElement("div");
