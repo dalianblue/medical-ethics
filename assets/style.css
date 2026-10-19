@@ -172,9 +172,12 @@ footer a { color: var(--accent); }
 .chat-topbar h1 { font-size: 17px; margin: 0; flex: 1; }
 .stage-chip { font-size: 11px; background: rgba(255,255,255,.18); padding: 3px 10px; border-radius: 99px; }
 .chat-body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
-.chat-main { flex: 1; overflow-y: auto; max-width: 760px; width: 100%; margin: 0 auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.chat-main { flex: 1; overflow-y: auto; max-width: 760px; width: 100%; margin: 0 auto; padding: 14px 14px 130px; display: flex; flex-direction: column; gap: 10px; }
 .chat-history { display: contents; }
-.chat-input-wrap { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+.chat-input-wrap { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: var(--panel); border-top: 1px solid var(--line);
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+.chat-main { padding-bottom: 120px; } /* 给fixed输入框留空间 */
 .chat-input-row { display: flex; gap: 8px; max-width: 760px; margin: 0 auto; }
 .chat-input-row textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
 .chat-input-row .btn { align-self: flex-end; }
