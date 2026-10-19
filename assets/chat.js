@@ -166,7 +166,7 @@ async function send() {
   } catch (e) {
     pend.innerHTML = renderMd(e.message === "KEYBAD" ? "⚠ API Key 无效，请到首页⚙重新填写"
                      : e.message === "NOKEY" ? "⚠ 请先在首页⚙填写 DeepSeek API Key"
-                     : e.message === "RATE" ? "⚠ 当前使用人数较多，请稍后再试，或在首页⚙填入自己的 DeepSeek Key"
+                     : e.message === "RATE" ? "⚠ 本小时使用次数已达上限（60次/时/IP），请下个整点再试，或在首页⚙填入自己的 DeepSeek Key"
                      : "⚠ 网络异常：" + e.message + "，请重试");
   }
 }
