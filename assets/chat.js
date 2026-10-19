@@ -113,15 +113,15 @@ async function send() {
   const pend = bubble("ai", "…");
   try {
     const answer = await deepseek(history);
-    pend.textContent = answer;
+    pend.innerHTML = renderMd(answer);
     history.push({ role: "assistant", content: answer });
     nextStage();
     saveHist();
   } catch (e) {
-    pend.textContent = e.message === "KEYBAD" ? "⚠ API Key 无效，请到首页⚙重新填写"
+    pend.innerHTML = renderMd(e.message === "KEYBAD" ? "⚠ API Key 无效，请到首页⚙重新填写"
                      : e.message === "NOKEY" ? "⚠ 请先在首页⚙填写 DeepSeek API Key"
                      : e.message === "RATE" ? "⚠ 当前使用人数较多，请稍后再试，或在首页⚙填入自己的 DeepSeek Key"
-                     : "⚠ 网络异常：" + e.message + "，请重试";
+                     : "⚠ 网络异常：" + e.message + "，请重试");
   }
 }
 $("btn-chat-send").onclick = send;
