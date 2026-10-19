@@ -208,29 +208,26 @@ async function generateDocs() {
       });
     }
     if (!r.ok) throw new Error("API" + r.status);
-    const data = await r.json();
+    let data = await r.json();
     let txt = data.choices[0].message.content;
-    const m = txt.match(/\{[\s\S]*\}/) || txt.match(/\{[\s\S]*/);
-    if (!m) throw new Error("AI输出格式异常");
-    let docs;
-    try {
-      docs = JSON.parse(m[0]);
-    } catch (pe) {
-      /* 长JSON被输出截断→粗补括号重试 */
-      let s = m[0].trim();
-      try {
-        docs = JSON.parse(s + '"}'.padStart(0));
-      } catch (e2) {
-        const opens = (s.match(/\{/g) || []).length - (s.match(/\}/g) || []).length;
-        const closes = (s.match(/\[/g) || []).length - (s.match(/\]/g) || []).length;
-        let patched = s.replace(/,\s*$/, '') + '"}'.padStart(0) + ']'.repeat(Math.max(0, closes)) + '}'.repeat(Math.max(0, opens));
-        try {
-          docs = JSON.parse(patched);
-        } catch (e3) {
-          throw new Error("AI输出不完整，请再点一次重试");
-        }
-      }
+    let docs = tryParseDocs(txt);
+    if (!docs) {
+      /* 截断类失败: 自动重试一次(要求精简输出) */
+      bubble("ai", "第一次生成不完整，正在自动重试（精简模式）…");
+      body.messages[0] = { role: "system", content: GEN_SYS + "\n注意: 上次输出过长被截断。本次protocol_md和consent_md合计控制在1500字以内, 只保留必需内容。" + riskContextBlock(history.map(m => m.content).join(" ")) };
+      r = await fetch(key ? "https://api.deepseek.com/v1/chat/completions" : "/api/me/", {
+        method: "POST",
+        headers: key ? { "Content-Type": "application/json", "Authorization": "Bearer " + key }
+                     : { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error("API" + r.status);
+      data = await r.json();
+      txt = data.choices[0].message.content;
+      docs = tryParseDocs(txt);
+      if (!docs) throw new Error("两次生成均不完整");
     }
+    /* docs解析移至tryParseDocs */
     downloadMd("研究方案.md", docs.protocol_md || "");
     setTimeout(() => downloadMd("知情同意书.md", docs.consent_md || ""), 400);
     if (docs.answers_summary) {
@@ -242,6 +239,27 @@ async function generateDocs() {
     bubble("ai", "生成文书时出现问题：" + (e.message || e) + "\n\n常见原因：\n1. AI输出被截断——再点一次通常就好\n2. 网络波动——稍后重试\n\n若反复失败，可换网络或用系统浏览器打开本页。");
     btn.disabled = false;
   }
+}
+function tryParseDocs(txt) {
+  const m = txt.match(/\{[\s\S]*\}/) || txt.match(/\{[\s\S]*/);
+  if (!m) return null;
+  try { return JSON.parse(m[0]); } catch (e) {}
+  /* 粗补截断: 数{}[]配对补齐 */
+  let s = m[0].trim().replace(/,\s*$/, '');
+  const ob = (s.match(/\{/g) || []).length, cb = (s.match(/\}/g) || []).length;
+  const ab = (s.match(/\[/g) || []).length, abk = (s.match(/\]/g) || []).length;
+  const candidates = [
+    s + '"}',
+    s + '"}]',
+    s + '"}]}' ,
+    s + ']' + '}'.repeat(Math.max(0, ob - cb)),
+    s + '}'.repeat(Math.max(0, ob - cb)),
+    s.replace(/\"[^\"]*$/, '') + '"}' ,
+  ];
+  for (const c of candidates) {
+    try { return JSON.parse(c); } catch (e) {}
+  }
+  return null;
 }
 function isWeixin() { return /MicroMessenger/i.test(navigator.userAgent); }
 function downloadMd(name, text) {
