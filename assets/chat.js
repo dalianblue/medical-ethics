@@ -250,3 +250,9 @@ if (history.length === 0) {
   if (typeof refreshGenBar === "function") refreshGenBar();
   bubble("ai", `（继续上次的对话，当前阶段：${stageName()}。重新开始请清除浏览器数据或点首页⚙重置。）`);
 }
+
+/* 时序兜底: 微信webview下localStorage/脚本执行序偶发异常, 多次尝试刷新按钮显隐 */
+[0, 300, 800].forEach(ms => setTimeout(refreshGenBar, ms));
+document.addEventListener("DOMContentLoaded", refreshGenBar);
+window.addEventListener("focus", refreshGenBar);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshGenBar(); });
