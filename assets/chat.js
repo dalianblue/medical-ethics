@@ -63,6 +63,19 @@ function matchRiskTopics(text) {
   }
   return out.slice(0, 4);
 }
+function detectDesign(text) {
+  const t = text || "";
+  if (/队列|cohort/i.test(t)) return "队列研究（按暴露自然分组，禁止随机分组与盲法表述）";
+  if (/病例对照|case-control/i.test(t)) return "病例对照研究（匹配设计，禁止随机分组）";
+  if (/横断面|cross-sectional|患病率调查/i.test(t)) return "横断面研究（无分组干预，禁止随机分组）";
+  if (/随机|RCT/i.test(t)) return "随机对照试验（RCT，含随机化与盲法描述）";
+  return "未明确——全部标注【待补充：设计类型】，禁止臆造随机/盲法";
+}
+function designBlock(historyArr) {
+  const joined = historyArr.map(m => m.content).join(" ");
+  return "\n【设计确认——最高优先级】从对话全历史判断，本研究设计类型是: " + detectDesign(joined)
+       + "\n全文所有章节（背景/目的/方法/步骤/路线图）必须与此设计一致。若上文写'随机分组困难改队列'，全文严禁出现'随机分为/随机对照/盲法'等RCT表述。\n";
+}
 function riskContextBlock(text) {
   const topics = matchRiskTopics(text);
   if (!topics.length) return "";
@@ -213,7 +226,7 @@ async function generateDocs() {
     const body = {
       model: "deepseek-chat", temperature: 0.3,
       messages: [
-        { role: "system", content: GEN_SYS + riskContextBlock(history.map(m => m.content).join(" ")) },
+        { role: "system", content: GEN_SYS + designBlock(history) + riskContextBlock(history.map(m => m.content).join(" ")) },
         ...history.slice(-30),
       ],
     };
@@ -238,7 +251,7 @@ async function generateDocs() {
     if (!docs) {
       /* 截断类失败: 自动重试一次(要求精简输出) */
       bubble("ai", "第一次生成不完整，正在自动重试（精简模式）…");
-      body.messages[0] = { role: "system", content: GEN_SYS + "\n注意: 上次输出被截断。本次保留全部章节结构, 压缩各章篇幅(每章2-3句核心), 优先保证两个分隔符标记完整。" + riskContextBlock(history.map(m => m.content).join(" ")) };
+      body.messages[0] = { role: "system", content: GEN_SYS + designBlock(history) + "\n注意: 上次输出被截断。本次保留全部章节结构, 压缩各章篇幅(每章2-3句核心), 优先保证两个分隔符标记完整。" + riskContextBlock(history.map(m => m.content).join(" ")) };
       r = await fetch(key ? "https://api.deepseek.com/v1/chat/completions" : "/api/me/", {
         method: "POST",
         headers: key ? { "Content-Type": "application/json", "Authorization": "Bearer " + key }
