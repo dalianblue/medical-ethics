@@ -307,6 +307,28 @@ async function generateDocs() {
       if (!docs) throw new Error("两次生成均不完整");
     }
     /* docs解析见parseSections */
+    /* 确定性设计校验: 服务端判定 vs 全文违禁词, 违规→自动重生成一次 */
+    const sysMsg = (body.messages[0] || {}).content || "";
+    const cohortLike = /队列|观察性|病例对照|横断面/.test(sysMsg);
+    const violations = cohortLike
+      ? (docs.protocol || "").match(/随机分为|随机对照试验|随机化方案|分配隐藏|采用盲法|评估者盲/g) || []
+      : [];
+    if (violations.length) {
+      bubble("ai", "检测到生成文稿与确认的队列/观察性设计不符（出现：" + [...new Set(violations)].join("、") + "），正在自动修正…");
+      body.messages.push({ role: "assistant", content: txt.slice(0, 400) });
+      body.messages.push({ role: "user", content: "你生成的方案违规使用了 " + [...new Set(violations)].join("、") + " 等随机对照试验要素。本研究设计是队列/观察性研究（按暴露自然分组）。请重新生成完整文书：研究设计与分组必须严格按队列研究写（暴露组/对照组、随访、混杂控制），全文不得出现任何随机分组、分配隐藏、盲法字样，保持 ===PROTOCOL=== 与 ===CONSENT=== 分隔符格式。" });
+      r = await fetch(key ? "https://api.deepseek.com/v1/chat/completions" : "/api/me/", {
+        method: "POST",
+        headers: key ? { "Content-Type": "application/json", "Authorization": "Bearer " + key }
+                     : { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error("API" + r.status);
+      data = await r.json();
+      txt = data.choices[0].message.content;
+      docs = parseSections(txt);
+      if (!docs) throw new Error("修正后仍不完整，请重试");
+    }
     downloadMd("研究方案.md", docs.protocol || "");
     if (docs.consent && docs.consent.length > 100) {
       setTimeout(() => downloadMd("知情同意书.md", docs.consent), 400);
