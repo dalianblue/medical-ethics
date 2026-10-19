@@ -31,3 +31,9 @@ sample_size.py（6公式计算书）与 render_protocol.py（answers.json→方�
 - 样本量最终辩护归统计师
 - 模板按浙大一院IIT定制，其他机构需适配
 - ChiCTR无公开API，注册字段清单供人工网页填写（NCT有PRS API可自动上传，路线图内）
+
+## 部署
+
+- **线上**：https://fxmlab.top/ethics/ （阿里云ECS nginx静态挂载，HTTPS复用主站证书）
+- GitHub Pages未启用（本地服务器部署替代）
+- 更新流程：改 /root/workspace/medical-ethics → git commit+push → cp到 /www/wwwroot/medical-ethics/
