@@ -44,11 +44,25 @@ function nextStage() {
 }
 
 /* ===== UI ===== */
-function bubble(role, text) {
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function renderMd(text) {
+  /* 先转义HTML防XSS, 再用marked渲染markdown */
+  return marked.parse(escapeHtml(text));
+}
+function bubble(role, text, isHtml) {
+  const row = document.createElement("div");
+  row.className = "bubble-row " + (role === "user" ? "row-user" : "row-ai");
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.textContent = role === "user" ? "🧑‍⚕️" : "🤖";
   const el = document.createElement("div");
   el.className = "ai-msg ai-" + role;
-  el.textContent = text;
-  $("chat-history").appendChild(el);
+  if (isHtml) el.innerHTML = text; else el.innerHTML = renderMd(text);
+  row.appendChild(avatar);
+  row.appendChild(el);
+  $("chat-history").appendChild(row);
   $("chat-history").scrollTop = $("chat-history").scrollHeight;
   return el;
 }
