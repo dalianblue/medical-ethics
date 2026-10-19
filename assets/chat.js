@@ -311,9 +311,28 @@ async function generateDocs() {
     /* 确定性设计校验: 服务端判定 vs 全文违禁词, 违规→自动重生成一次 */
     const sysMsg = (body.messages[0] || {}).content || "";
     const cohortLike = /队列|观察性|病例对照|横断面/.test(sysMsg);
-    const violations = cohortLike
+    let violations = cohortLike
       ? (docs.protocol || "").match(/随机分为|随机对照试验|随机化方案|分配隐藏|采用盲法|评估者盲/g) || []
       : [];
+    /* 术式入路校验: 腹腔镜语境混入其他入路术式(施主抓到的TURP幻觉类) */
+    const termIssues = checkMixedApproach((docs.protocol || "") + " " + (docs.consent || ""));
+    if (termIssues.length && !violations.length) {
+      bubble("ai", "⚠ 术式校验发现疑似入路混列：\n" + termIssues.slice(0, 3).join("\n")
+        + "\n\n已按术语边界规则重试生成（术式清单只保留对话中确认的入路）。");
+      body.messages.push({ role: "assistant", content: txt.slice(0, 300) });
+      body.messages.push({ role: "user", content: "你生成的文书把不同手术入路的术式混列了（如腹腔镜清单中出现经尿道术式）。手术入路互斥：经尿道/腹腔镜/开放切口不得并列。请重新生成完整文书：只保留对话中确认过的术式，未确认的术式标注【待补充：术式名称】，保持 ===PROTOCOL=== 与 ===CONSENT=== 分隔符格式。" });
+      r = await fetch(key ? "https://api.deepseek.com/v1/chat/completions" : "/api/me/", {
+        method: "POST",
+        headers: key ? { "Content-Type": "application/json", "Authorization": "Bearer " + key }
+                     : { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error("API" + r.status);
+      data = await r.json();
+      txt = data.choices[0].message.content;
+      docs = parseSections(txt);
+      if (!docs) throw new Error("修正后仍不完整，请重试");
+    }
     if (violations.length) {
       bubble("ai", "检测到生成文稿与确认的队列/观察性设计不符（出现：" + [...new Set(violations)].join("、") + "），正在自动修正…");
       body.messages.push({ role: "assistant", content: txt.slice(0, 400) });
@@ -343,6 +362,35 @@ async function generateDocs() {
     bubble("ai", "生成文书时出现问题：" + (e.message || e) + "\n\n常见原因：\n1. AI输出被截断——再点一次通常就好\n2. 网络波动——稍后重试\n\n若反复失败，可换网络或用系统浏览器打开本页。");
     btn.disabled = false;
   }
+}
+
+/* ===== 术式入路校验(蒸馏自second-brain教科书卡, 1019) ===== */
+const APPROACH = {
+  "腹腔镜": ["腹腔镜", "气腹", "套管", "穿刺器"],
+  "经尿道内镜": ["经尿道", "电切镜", "剜除", "TURP", "膀胱镜", "输尿管镜", "肾镜", "宫腔镜"],
+  "机器人辅助": ["机器人", "达芬奇"],
+  "开放切口": ["开腹", "开放手术"],
+  "介入/腔内": ["介入", "支架", "栓塞"],
+  "内镜消化道": ["胃镜", "肠镜"],
+};
+function approachOf(term) {
+  const hits = new Set();
+  for (const [a, kws] of Object.entries(APPROACH)) {
+    if (kws.some(kw => term.toLowerCase().includes(kw.toLowerCase()))) hits.add(a);
+  }
+  return hits;
+}
+function checkMixedApproach(text) {
+  const issues = [];
+  const re = /腹腔镜[\u4e00-\u9fff]{0,14}?(?:手术|切除术|手术（[^）]{0,40}）)[^。\n]{0,100}/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const seg = m[0];
+    for (const bad of ["经尿道", "电切镜", "剜除", "开腹"]) {
+      if (seg.includes(bad)) issues.push("腹腔镜语境中混入非腹腔镜入路术式（" + bad + "）：" + seg.slice(0, 60) + "…");
+    }
+  }
+  return issues;
 }
 function parseSections(txt) {
   txt = String(txt).replace(/```[a-z]*\n?/gi, "").replace(/```/g, "");
