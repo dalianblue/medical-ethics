@@ -210,9 +210,27 @@ async function generateDocs() {
     if (!r.ok) throw new Error("API" + r.status);
     const data = await r.json();
     let txt = data.choices[0].message.content;
-    const m = txt.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error("格式");
-    const docs = JSON.parse(m[0]);
+    const m = txt.match(/\{[\s\S]*\}/) || txt.match(/\{[\s\S]*/);
+    if (!m) throw new Error("AI输出格式异常");
+    let docs;
+    try {
+      docs = JSON.parse(m[0]);
+    } catch (pe) {
+      /* 长JSON被输出截断→粗补括号重试 */
+      let s = m[0].trim();
+      try {
+        docs = JSON.parse(s + '"}'.padStart(0));
+      } catch (e2) {
+        const opens = (s.match(/\{/g) || []).length - (s.match(/\}/g) || []).length;
+        const closes = (s.match(/\[/g) || []).length - (s.match(/\]/g) || []).length;
+        let patched = s.replace(/,\s*$/, '') + '"}'.padStart(0) + ']'.repeat(Math.max(0, closes)) + '}'.repeat(Math.max(0, opens));
+        try {
+          docs = JSON.parse(patched);
+        } catch (e3) {
+          throw new Error("AI输出不完整，请再点一次重试");
+        }
+      }
+    }
     downloadMd("研究方案.md", docs.protocol_md || "");
     setTimeout(() => downloadMd("知情同意书.md", docs.consent_md || ""), 400);
     if (docs.answers_summary) {
@@ -220,15 +238,45 @@ async function generateDocs() {
     }
     btn.textContent = "✅ 已生成（若未弹出下载请检查浏览器设置）";
   } catch (e) {
-    btn.textContent = "⚠ 生成失败: " + e.message + "，请重试";
+    btn.textContent = "⚠ " + (e.message || "失败") + "，请重试";
+    bubble("ai", "生成文书时出现问题：" + (e.message || e) + "\n\n常见原因：\n1. AI输出被截断——再点一次通常就好\n2. 网络波动——稍后重试\n\n若反复失败，可换网络或用系统浏览器打开本页。");
     btn.disabled = false;
   }
 }
+function isWeixin() { return /MicroMessenger/i.test(navigator.userAgent); }
 function downloadMd(name, text) {
+  if (isWeixin()) {
+    /* 微信内置浏览器不支持blob a[download]下载 → 弹层展示全文, 引导复制/用系统浏览器打开 */
+    showCopyModal(name, text);
+    return;
+  }
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
   a.download = name;
+  document.body.appendChild(a);
   a.click();
+  a.remove();
+}
+function showCopyModal(name, text) {
+  let ov = document.getElementById("copy-modal");
+  if (ov) ov.remove();
+  ov = document.createElement("div");
+  ov.id = "copy-modal";
+  ov.className = "modal";
+  ov.innerHTML = '<div class="modal-box" style="max-width:92vw">'
+    + '<h2>' + name.replace(/</g, "&lt;") + '</h2>'
+    + '<p class="hint">微信内不支持直接下载。请【全选复制】以下内容，粘贴到备忘录/邮件保存；或点右上角"…"选择"在浏览器打开"后重新生成下载。</p>'
+    + '<textarea readonly style="width:100%;height:50vh;font-size:12px;border:1px solid #dde4ea;border-radius:8px;padding:8px"></textarea>'
+    + '<div class="modal-btns"><button class="btn-ghost" onclick="document.getElementById(\'copy-modal\').remove()">关闭</button>'
+    + '<button class="btn-primary" id="copy-sel">全选复制</button></div></div>';
+  document.body.appendChild(ov);
+  const ta = ov.querySelector("textarea");
+  ta.value = text;
+  ov.querySelector("#copy-sel").onclick = () => {
+    ta.focus(); ta.select();
+    try { document.execCommand("copy"); ov.querySelector("#copy-sel").textContent = "✅ 已复制"; }
+    catch (e) { alert("请手动长按全选复制"); }
+  };
 }
 $("btn-gen").addEventListener("click", generateDocs);
 
