@@ -65,16 +65,24 @@ function matchRiskTopics(text) {
 }
 function detectDesign(text) {
   const t = text || "";
+  /* 反RCT信号优先: "随机分组困难/难以随机/无法随机" = 想避开RCT的强信号 */
+  const antiRct = /随机[^。]{0,6}(困难|难|不可行|无法)|难以随机|无法随机|不好随机|没法随机/;
   if (/队列|cohort/i.test(t)) return "队列研究（按暴露自然分组，禁止随机分组与盲法表述）";
   if (/病例对照|case-control/i.test(t)) return "病例对照研究（匹配设计，禁止随机分组）";
-  if (/横断面|cross-sectional|患病率调查/i.test(t)) return "横断面研究（无分组干预，禁止随机分组）";
-  if (/随机|RCT/i.test(t)) return "随机对照试验（RCT，含随机化与盲法描述）";
-  return "未明确——全部标注【待补充：设计类型】，禁止臆造随机/盲法";
+  if (/横断面|cross-sectional|患病率调查|现况调查/i.test(t)) return "横断面研究（无分组干预，禁止随机分组）";
+  if (/前瞻性观察|观察性|自然分组|按是否.{0,8}分组|实际接受|回顾性分析|翻.{0,4}病历|病历回顾/.test(t)) return "观察性研究（自然分组，禁止随机分组与盲法表述）";
+  if (antiRct.test(t)) return "非随机对照（对话明确随机分组困难——按暴露/干预自然分组设计，全文禁止随机分组、分配隐藏、盲法表述）";
+  if (/随机对照|RCT|随机分组(?!困难)/.test(t)) return "随机对照试验（RCT，含随机化与盲法描述）";
+  return "UNSETTLED";
 }
 function designBlock(historyArr) {
   const joined = historyArr.map(m => m.content).join(" ");
-  return "\n【设计确认——最高优先级】从对话全历史判断，本研究设计类型是: " + detectDesign(joined)
-       + "\n全文所有章节（背景/目的/方法/步骤/路线图）必须与此设计一致。若上文写'随机分组困难改队列'，全文严禁出现'随机分为/随机对照/盲法'等RCT表述。\n";
+  const d = detectDesign(joined);
+  if (d === "UNSETTLED") {
+    return "\n【设计确认——最高优先级】对话中未明确研究设计类型。全文严禁出现'随机分组/随机对照/盲法/分配隐藏'等表述，设计相关内容全部标注【待补充：设计类型与分组方法】。\n";
+  }
+  return "\n【设计确认——最高优先级】从对话全历史判断，本研究设计类型是: " + d
+       + "\n全文所有章节（背景/目的/方法/步骤/路线图）必须与此设计一致。设计确认优先于本提示词中的任何章节模板要求：模板中不适用于该设计的章节要素（如队列研究的随机化/盲法）必须整体省略，不得改写后塞入。\n";
 }
 function riskContextBlock(text) {
   const topics = matchRiskTopics(text);
