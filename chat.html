@@ -18,7 +18,11 @@
   <div class="chat-history" id="chat-history"></div>
 </main>
 
-<div class="chat-input-wrap">
+<div class="gen-bar" id="gen-bar" hidden>
+    <button id="btn-gen" class="btn-primary gen-btn">📄 生成文书（方案+知情同意书）</button>
+    <p class="gen-hint">根据以上对话内容生成，下载为 Markdown 文件</p>
+  </div>
+  <div class="chat-input-wrap">
   <div class="chat-input-row">
     <textarea id="chat-input" rows="2" placeholder="用大白话描述你的研究想法，或粘贴已有方案…"></textarea>
     <button id="btn-chat-send" class="btn-primary">发送</button>
@@ -28,6 +32,6 @@
 
 <script src="assets/marked.min.js"></script>
 <script src="assets/risk_kb.js"></script>
-<script src="assets/chat.js?v=6"></script>
+<script src="assets/chat.js?v=7"></script>
 </body>
 </html>

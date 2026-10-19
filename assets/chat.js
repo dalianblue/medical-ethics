@@ -85,6 +85,7 @@ function nextStage() {
   stage = STAGES[i].id;
   localStorage.setItem(STAGE_LS, stage);
   $("stage-chip").textContent = "阶段：" + stageName();
+  if (typeof refreshGenBar === "function") refreshGenBar();
 }
 
 /* ===== UI ===== */
@@ -169,6 +170,68 @@ async function send() {
                      : "⚠ 网络异常：" + e.message + "，请重试");
   }
 }
+
+/* ===== 生成文书(generate阶段) ===== */
+function refreshGenBar() {
+  $("gen-bar").hidden = stage !== "generate";
+}
+const GEN_SYS = `你是医学研究伦理文书生成器。根据对话历史中收集的研究信息, 生成:
+1) 研究方案(章节: 研究背景/研究目的/研究设计/纳入排除标准/样本量与统计/知情同意)
+2) 知情同意书(章节: 为什么做这项研究/参加需要做什么/风险与不适/自愿参加与退出/隐私保护/联系人/同意声明签名栏)
+要求: 中文, 医学规范表述; 风险章节若上下文含风险提示库条目须逐条引用发生率与来源; 未收集到的信息用【待补充】标注, 不得编造;
+输出JSON: {"protocol_md": "研究方案全文markdown", "consent_md": "知情同意书全文markdown", "answers_summary": {"title":"研究题目","design":"设计类型","sample_size":"样本量"}}`;
+
+async function generateDocs() {
+  const btn = $("btn-gen");
+  btn.disabled = true; btn.textContent = "⏳ 生成中，约10-30秒…";
+  try {
+    const key = localStorage.getItem(KEY_LS);
+    const body = {
+      model: "deepseek-chat", temperature: 0.3,
+      messages: [
+        { role: "system", content: GEN_SYS + riskContextBlock(history.map(m => m.content).join(" ")) },
+        ...history.slice(-30),
+      ],
+    };
+    let r;
+    if (key) {
+      r = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+        body: JSON.stringify(body),
+      });
+    } else {
+      r = await fetch("/api/me/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    }
+    if (!r.ok) throw new Error("API" + r.status);
+    const data = await r.json();
+    let txt = data.choices[0].message.content;
+    const m = txt.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error("格式");
+    const docs = JSON.parse(m[0]);
+    downloadMd("研究方案.md", docs.protocol_md || "");
+    setTimeout(() => downloadMd("知情同意书.md", docs.consent_md || ""), 400);
+    if (docs.answers_summary) {
+      setTimeout(() => downloadMd("研究要素.json", JSON.stringify(docs.answers_summary, null, 2)), 800);
+    }
+    btn.textContent = "✅ 已生成（若未弹出下载请检查浏览器设置）";
+  } catch (e) {
+    btn.textContent = "⚠ 生成失败: " + e.message + "，请重试";
+    btn.disabled = false;
+  }
+}
+function downloadMd(name, text) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+  a.download = name;
+  a.click();
+}
+$("btn-gen").addEventListener("click", generateDocs);
+
 $("btn-chat-send").onclick = send;
 $("chat-input").addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
@@ -184,5 +247,6 @@ if (history.length === 0) {
 } else {
   history.forEach(m => bubble(m.role === "user" ? "user" : "ai", m.content));
   $("stage-chip").textContent = "阶段：" + stageName();
+  if (typeof refreshGenBar === "function") refreshGenBar();
   bubble("ai", `（继续上次的对话，当前阶段：${stageName()}。重新开始请清除浏览器数据或点首页⚙重置。）`);
 }
