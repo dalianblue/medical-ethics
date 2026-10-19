@@ -124,3 +124,58 @@ footer a { color: var(--accent); }
   .opts label { flex: 1 1 30%; }
   .btn-nav { max-width: 300px; }
 }
+
+/* ===== 双入口首页+聊天页(1019晚) ===== */
+.landing { max-width: 720px; margin: 0 auto; padding: 10px 16px 40px; }
+.hello { text-align: center; color: var(--muted); font-size: 14px; margin: 14px 0 18px; }
+.mode-card {
+  display: block; position: relative; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 16px;
+  padding: 20px 18px; margin-bottom: 14px; text-decoration: none; color: var(--ink);
+  transition: transform .12s, box-shadow .12s;
+}
+.mode-card:active { transform: scale(.985); }
+.mode-card:hover { box-shadow: 0 4px 18px rgba(44,95,138,.14); }
+.mode-icon { font-size: 30px; margin-bottom: 6px; }
+.mode-card h2 { color: var(--accent); margin: 0 0 8px; font-size: 18px; }
+.mode-card p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+.mode-tag {
+  position: absolute; top: 16px; right: 16px;
+  font-size: 11px; font-weight: 700; color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
+  padding: 2px 9px; border-radius: 99px;
+}
+.mode-tag2 { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.privacy { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 18px; }
+
+.gear {
+  position: absolute; top: 18px; right: 16px;
+  background: rgba(255,255,255,.15); border: none; color: #fff;
+  width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer;
+}
+.gear:hover { background: rgba(255,255,255,.3); }
+
+.modal { position: fixed; inset: 0; z-index: 100; background: rgba(20,30,40,.5);
+  display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal[hidden] { display: none; }
+.modal-box { background: var(--panel); border-radius: 14px; padding: 22px; max-width: 420px; width: 100%; }
+.modal-box h2 { color: var(--accent); font-size: 17px; margin: 0 0 14px; }
+.modal-box label { display: block; font-size: 13.5px; color: var(--muted); }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.btn-ghost { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 8px 18px; cursor: pointer; color: var(--muted); }
+.hint { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+.hint a { color: var(--accent); }
+
+/* 聊天页 */
+.chat-topbar { display: flex; align-items: center; gap: 10px; }
+.back-home { color: rgba(255,255,255,.9); text-decoration: none; font-size: 13px; }
+.chat-topbar h1 { font-size: 17px; margin: 0; flex: 1; }
+.stage-chip { font-size: 11px; background: rgba(255,255,255,.18); padding: 3px 10px; border-radius: 99px; }
+.chat-body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+.chat-main { flex: 1; overflow-y: auto; max-width: 760px; width: 100%; margin: 0 auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.chat-history { display: contents; }
+.chat-input-wrap { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+.chat-input-row { display: flex; gap: 8px; max-width: 760px; margin: 0 auto; }
+.chat-input-row textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
+.chat-input-row .btn { align-self: flex-end; }
+.chat-note { max-width: 760px; margin: 6px auto 0; font-size: 10.5px; color: var(--muted); text-align: center; }

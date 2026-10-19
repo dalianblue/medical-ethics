@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2c5f8a">
+<title>专家模式 · 医学研究伦理申请助手</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar"><a class="back-home" href="index.html">← 首页</a>
+  <h1>医学研究伦理申请助手</h1>
+  <p class="tagline">研究类型判定 · 样本量估计 · 研究方案与知情同意书生成</p>
+</header>
+
+<nav class="steps" aria-label="进度">
+  <span class="step on" data-s="1">1 类型</span>
+  <span class="step" data-s="2">2 设计</span>
+  <span class="step" data-s="3">3 样本量</span>
+  <span class="step" data-s="4">4 文书</span>
+</nav>
+
+<main>
+
+<!-- ===== Step 1: 研究类型 ===== -->
+<section id="s1" class="card on">
+  <h2>① 研究类型判定</h2>
+
+  <div class="q">
+    <label>研究是否对受试者施加干预措施（新药/新器械/改变治疗流程）？</label>
+    <div class="opts" role="radiogroup">
+      <label><input type="radio" name="interventional" value="no" checked> 否，仅观察/分析数据</label>
+      <label><input type="radio" name="interventional" value="yes"> 是，有干预</label>
+    </div>
+  </div>
+
+  <div class="q" id="q-int-detail" style="display:none">
+    <label>干预性研究的注册义务（ICMJE）：干预性临床试验<b>必须在公共注册库注册</b>后才能发表。
+    中国境内 → 中国临床试验注册中心（ChiCTR）；国际多中心/投国际刊 → ClinicalTrials.gov（NCT）。</label>
+    <label>研究分期（如适用）：
+      <select id="phase">
+        <option value="">不适用（IV期后/器械/观察）</option>
+        <option>I期</option><option>II期</option><option>III期</option><option>IV期</option>
+      </select>
+    </label>
+    <label>随机方法：
+      <select id="randomization">
+        <option value="">未定</option>
+        <option>简单随机</option><option>区组随机</option>
+        <option>分层随机</option><option>中央随机</option>
+      </select>
+    </label>
+    <label>盲法：
+      <select id="blinding">
+        <option>开放标签</option><option>单盲</option><option>双盲</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="q">
+    <label>数据采集时相？</label>
+    <div class="opts">
+      <label><input type="radio" name="timing" value="prospective"> 前瞻性（先设计后采集）</label>
+      <label><input type="radio" name="timing" value="retrospective"> 回顾性（分析已有数据）</label>
+      <label><input type="radio" name="timing" value="hybrid"> 混合（前瞻采集+回顾分析）</label>
+    </div>
+  </div>
+
+  <div class="verdict" id="type-verdict"></div>
+
+  <label class="full">研究题目<textarea id="title" rows="2" placeholder="与伦理批件一致的正式题目"></textarea></label>
+  <label class="full">研究背景<textarea id="background" rows="4" placeholder="研究背景与立题依据…"></textarea></label>
+</section>
+
+<!-- ===== Step 2: 研究对象 ===== -->
+<section id="s2" class="card">
+  <h2>② 研究对象（纳排标准）</h2>
+  <label class="full">纳入标准（每行一条）<textarea id="inclusion" rows="5" placeholder="18-69岁成年患者&#10;气管插管全身麻醉下行外科手术&#10;…"></textarea></label>
+  <label class="full">排除标准（每行一条）<textarea id="exclusion" rows="5" placeholder="中枢神经系统病史&#10;困难气道&#10;…"></textarea></label>
+  <div class="grid2">
+    <label>年龄下限<input type="number" id="age-min" placeholder="18"></label>
+    <label>年龄上限<input type="number" id="age-max" placeholder="69"></label>
+  </div>
+</section>
+
+<!-- ===== Step 3: 样本量 ===== -->
+<section id="s3" class="card">
+  <h2>③ 样本量估计</h2>
+  <label>设计类型
+    <select id="calc-type">
+      <option value="two_proportions">两样本率比较</option>
+      <option value="two_means">两样本均值比较</option>
+      <option value="noninferiority">非劣效试验</option>
+      <option value="tost">TOST等价检验</option>
+      <option value="auc_ci">AUC诊断研究（CI宽度法）</option>
+      <option value="correlation">相关性分析</option>
+    </select>
+  </label>
+
+  <div class="grid2">
+    <label class="f-p1">p₁（组1率）<input type="number" step="0.01" id="p1" placeholder="0.10"></label>
+    <label class="f-p2">p₂（组2率）<input type="number" step="0.01" id="p2" placeholder="0.03"></label>
+    <label class="f-delta">δ（差值/界值）<input type="number" step="0.01" id="delta"></label>
+    <label class="f-sd">标准差 SD<input type="number" step="0.01" id="sd"></label>
+    <label class="f-auc">预期AUC<input type="number" step="0.01" id="auc"></label>
+    <label class="f-ciw">目标CI宽度<input type="number" step="0.01" id="ci-width"></label>
+    <label class="f-r">预期相关系数 r<input type="number" step="0.01" id="r"></label>
+  </div>
+
+  <div class="grid3">
+    <label>α<input type="number" step="0.005" id="alpha" value="0.05"></label>
+    <label>把握度 1-β<input type="number" step="0.05" id="power" value="0.80"></label>
+    <label>单/双侧
+      <select id="tails"><option value="2">双侧</option><option value="1">单侧</option></select>
+    </label>
+  </div>
+  <div class="grid2">
+    <label>脱落率<input type="number" step="0.05" id="dropout" value="0.20"></label>
+    <div class="calc-btn-wrap"><button id="btn-calc" class="btn-primary">计 算</button></div>
+  </div>
+
+  <div class="result" id="calc-result" hidden></div>
+</section>
+
+<!-- ===== Step 4: 文书生成 ===== -->
+<section id="s4" class="card">
+  <h2>④ 研究方案与知情同意书</h2>
+
+  <div class="q">
+    <label>知情同意方式？</label>
+    <div class="opts">
+      <label><input type="radio" name="consent" value="consent" checked> 签署知情同意书</label>
+      <label><input type="radio" name="consent" value="waiver"> 申请豁免知情同意</label>
+    </div>
+  </div>
+  <label class="full" id="q-waiver-just" style="display:none">豁免论证（逐条说明，建议≥3条）<textarea id="waiver" rows="5" placeholder="①利用临床常规监测已采集的数据，无额外费用与操作&#10;②回顾病历记录的结局标签&#10;③所有数据去标识化…"></textarea></label>
+
+  <label class="full">研究目的（每行一条）<textarea id="purposes" rows="3" placeholder="分析苏醒期脑电特征…"></textarea></label>
+
+  <div class="gen-wrap">
+    <button id="btn-gen" class="btn-primary btn-large">生 成 文 书</button>
+  </div>
+  <div id="gen-result" hidden>
+    <a id="dl-protocol" class="btn-primary dl" download="研究方案.md">⬇ 下载研究方案.md</a>
+    <a id="dl-consent" class="btn-primary dl" download="知情同意书.md">⬇ 下载知情同意书.md</a>
+    <a id="dl-answers" class="btn-dl" download="answers.json">⬇ 下载answers.json（留档/复算）</a>
+  </div>
+
+  <p class="disclaimer">⚠ 本工具生成的内容为研究设计辅助稿，须由研究者和统计师审核，
+  并经所在机构伦理委员会审查批准后方可实施。样本量计算书供参考，最终辩护归统计师。</p>
+</section>
+
+</main>
+
+<div class="nav-btns">
+  <button id="btn-prev" class="btn-nav" disabled>← 上一步</button>
+  <button id="btn-next" class="btn-nav">下一步 →</button>
+</div>
+
+<footer>medical-ethics · 本地运行，数据不出浏览器 · 浙大一院IIT模板 ·
+  <a href="https://github.com/dalianblue/medical-ethics" target="_blank" rel="noopener">GitHub</a></footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
