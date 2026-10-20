@@ -132,10 +132,14 @@ function extractKeywords(text) {
   if (e) kws.push(...e.map(x => x.toLowerCase()).slice(0, 2));
   return [...new Set(kws)].slice(0, 3);
 }
+let _ctgovCache = { key: "", block: "" };
 async function fetchSimilarTrials(historyArr) {
   const joined = historyArr.map(m => m.content).join(" ");
   const kws = extractKeywords(joined);
   if (!kws.length) return "";
+  /* 克制原则: 同关键词组合复用缓存(会话内不重复请求CT.gov) */
+  const cacheKey = kws.join("|");
+  if (_ctgovCache.key === cacheKey && _ctgovCache.block) return _ctgovCache.block;
   try {
     const q = encodeURIComponent(kws.join(" OR "));
     const url = "https://clinicaltrials.gov/api/v2/studies?query.cond=" + q
@@ -158,9 +162,10 @@ async function fetchSimilarTrials(historyArr) {
       if (po) s += "  主结局: " + po.measure + " | " + (po.timeFrame || "") + "\n";
     }
     s += "\n参照以上范本的规范程度输出, 但研究内容以用户对话为准。\n";
+    _ctgovCache = { key: cacheKey, block: s };
     return s;
   } catch (e) {
-    return "";  // CT.gov不可达时静默跳过(不阻塞生成)
+    return "";  // CT.gov不可达时静默跳过(不阻塞生成, 不重试轰炸)
   }
 }
 function riskContextBlock(text) {
