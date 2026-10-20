@@ -211,6 +211,46 @@ function drawCurves() {
   drawOne(conf[0][0], conf[0][1], conf[0][2]);
   drawOne(conf[1][0], conf[1][1], conf[1][2]);
 }
+
+/* ===== 复制参数摘要(论文方法学段) ===== */
+function buildSummary() {
+  const r = calcN(P.type, P);
+  const dropTxt = P.dropout > 0 ? "，考虑 " + Math.round(P.dropout*100) + "% 脱落率放大后每组 " + r.nFinal + " 例" : "";
+  const lines = {
+    two_proportions: "样本量估算：本研究为两组率的比较，预期对照组事件发生率为 " + Math.round(P.p1*100) + "%、试验组为 " + Math.round(P.p2*100) + "%，" +
+      "采用双侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
+    two_means: "样本量估算：本研究为两组均数的比较，预期两组差值 δ=" + P.delta + "、标准差 SD=" + P.sd + "，" +
+      "采用" + (P.tails === 1 ? "单侧" : "双侧") + "检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
+    noninferiority: "样本量估算：本研究采用非劣效设计，非劣效界值 Δ=" + P.delta + "、标准差 SD=" + P.sd + "，" +
+      "单侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
+    tost: "样本量估算：本研究采用等效性设计（TOST），等效界值 Δ=" + P.delta + "、标准差 SD=" + P.sd + "，" +
+      "双侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
+    auc_ci: "样本量估算：本研究为诊断准确性试验，预期 AUC=" + P.auc + "，期望置信区间宽度 " + P.ciWidth + "（α=" + P.alpha + "），经计算需纳入 " + r.total + " 例受试者。",
+    correlation: "样本量估算：本研究为相关性分析，预期相关系数 r=" + P.r + "，" +
+      "采用双侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算需纳入 " + r.total + " 例受试者。",
+  };
+  return (lines[P.type] || "") + "\n（计算结果供设计参考，最终样本量辩护归统计师。）";
+}
+function copySummary() {
+  const text = buildSummary();
+  const done = () => {
+    const btn = document.querySelector(".btn-primary[onclick*=copySummary]");
+    if (btn) { const old = btn.textContent; btn.textContent = "✅ 已复制到剪贴板"; setTimeout(() => btn.textContent = old, 2000); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, done) {
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); done(); }
+  catch (e) { alert("复制失败，请长按选择手动复制：\n\n" + text); }
+  ta.remove();
+}
 function drawOne(canvasId, vary, xlabel) {
   const cv = $(canvasId);
   if (!cv) return;
