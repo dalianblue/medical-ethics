@@ -17,7 +17,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     http_response_code(405); echo json_encode(['error' => 'POST only']); exit;
 }
 
-/* 限流: 每IP每小时60次 */
+/* 限流: 每IP每小时20次(1020收紧60→20: 引导式对话单份文书6~10轮, 20次=2~3份完整文书, 真实用户够用) */
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 $rateFile = sys_get_temp_dir() . '/me_rate_' . md5($ip) . '.json';
 $now = time();
@@ -26,9 +26,9 @@ if (file_exists($rateFile)) {
     $hits = json_decode(file_get_contents($rateFile), true) ?: [];
     $hits = array_values(array_filter($hits, fn($t) => $t > $now - 3600));
 }
-if (count($hits) >= 60) {
+if (count($hits) >= 20) {
     http_response_code(429);
-    echo json_encode(['error' => '使用频率超限（每IP每小时60次），请稍后再试']);
+    echo json_encode(['error' => '使用频率超限（每IP每小时20次），请稍后再试']);
     exit;
 }
 $hits[] = $now;
