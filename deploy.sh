@@ -15,6 +15,15 @@ if [ "$DEPLOYED_HASH" != "$SRC_HASH" ]; then
     echo "bumped chat.js引用→v$NEWV"
 fi
 
+# chat.js同款: style.css变化→bump所有页面的style.css引用
+CSS_DEPLOYED=$(md5sum $DST/assets/style.css | cut -d' ' -f1)
+CSS_SRC=$(md5sum $SRC/assets/style.css | cut -d' ' -f1)
+if [ "$CSS_DEPLOYED" != "$CSS_SRC" ]; then
+    NEWC=$(( $(grep -oP 'style\.css\?v=\K[0-9]+' $SRC/index.html | head -1) + 1 ))
+    sed -i "s/style\.css?v=[0-9]*/style.css?v=$NEWC/g" $SRC/index.html $SRC/chat.html $SRC/expert.html $SRC/calc.html
+    echo "bumped style.css引用→v$NEWC"
+fi
+
 # 1.5 生成version.json(单一版本真源: commit短hash+构建时间)
 V=$(git -C $SRC log -1 --format=%h)
 printf '{"v": "%s", "built": "%s"}' "$V" "$(date +%m-%d\ %H:%M)" > $SRC/version.json
