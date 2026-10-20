@@ -122,19 +122,9 @@ async function designBlockAsync(historyArr) {
 function extractKeywords(text) {
   const t = text || "";
   const kws = [];
-  /* 中→英映射表(CT.gov库是英文, 中文直查0命中——1020实测) */
-  const ZH2EN = {
-    "前列腺切除": "prostatectomy", "前列腺癌": "prostate cancer",
-    "腹腔镜": "laparoscopic", "经尿道": "transurethral",
-    "骶麻": "caudal block", "骶管阻滞": "caudal block",
-    "椎管内": "neuraxial", "硬膜外": "epidural", "腰麻": "spinal anesthesia",
-    "全身麻醉": "general anesthesia", "全麻": "general anesthesia",
-    "躁动": "emergence agitation", "谵妄": "delirium",
-    "术后疼痛": "postoperative pain", "恶心呕吐": "postoperative nausea vomiting",
-    "低血压": "hypotension", "糖尿病": "diabetes mellitus",
-    "高血压": "hypertension", "冠心病": "coronary artery disease",
-    "剖宫产": "cesarean delivery", "日间手术": "ambulatory surgery",
-  };
+  /* 中→MeSH规范词映射(1020升级: MeSH 2026全量词表校验, 40条常用医学词)
+     mesh_zh2en.json由工具维护, 每条已验证存在于MeSH descriptors */
+  const ZH2EN = window.MESH_ZH2EN || {};
   for (const [zh, en] of Object.entries(ZH2EN)) {
     if (t.includes(zh)) kws.push(en);
   }
