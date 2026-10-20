@@ -54,8 +54,11 @@ function calcN(type, p) {
   }
   const dropout = p.dropout || 0;
   const nFinal = dropout > 0 ? Math.ceil(n / (1 - dropout)) : n;
-  const total = unit === "total" ? nFinal : nFinal * 2;
-  return { n, nFinal, total, formula, unit };
+  const ratio = p.ratio && p.ratio > 0 ? p.ratio : 1;
+  /* 1:1时总数=nFinal*2; r:1时=组1*nFinal + 对照组*nFinal*ratio */
+  const total = unit === "total" ? nFinal
+              : (ratio === 1 ? nFinal * 2 : nFinal + Math.ceil(nFinal * ratio));
+  return { n, nFinal, total, formula, unit, ratio };
 }
 
 /* ===== 向导状态 ===== */
@@ -118,7 +121,7 @@ function showStep(n) {
   document.querySelectorAll(".wiz-dot").forEach((el, i) => el.classList.toggle("on", i <= n));
   $("btn-prev").hidden = n === 0;
   $("btn-next").hidden = n === STEPS5.length - 1;
-  if (STEPS5[n] === "result") renderResult();
+  if (STEPS5[n] === "result") requestAnimationFrame(() => requestAnimationFrame(renderResult));
 }
 
 function next() {
