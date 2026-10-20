@@ -6,7 +6,7 @@
 
 ## 在线使用
 
-GitHub Pages（启用后）：https://dalianblue.github.io/medical-ethics/
+**GitHub Pages**：https://dalianblue.github.io/medical-ethics/
 
 或本地打开 `index.html` —— 无后端、无依赖、无数据上传，所有计算在浏览器完成。
 
@@ -16,6 +16,7 @@ GitHub Pages（启用后）：https://dalianblue.github.io/medical-ethics/
 2. **纳排标准**：结构化输入
 3. **样本量估计**：两率比较/均值比较/非劣效/TOST等价/AUC诊断(CI宽度)/相关性，含脱落率放大
 4. **文书生成**：研究方案 + 知情同意书（Markdown下载），answers.json留档可复算
+5. **随便聊聊（AI引导员）**：对话式采集研究要素，逐步生成完整文书
 
 ## 模板依据
 
@@ -34,9 +35,26 @@ sample_size.py（6公式计算书）与 render_protocol.py（answers.json→方�
 
 ## 部署
 
-- **线上**：https://fxmlab.top/ethics/ （阿里云ECS nginx静态挂载，HTTPS复用主站证书）
-- GitHub Pages未启用（本地服务器部署替代）
-- 更新流程：改 /root/workspace/medical-ethics → git commit+push → cp到 /www/wwwroot/medical-ethics/
+纯静态站点，两种玩法：
+
+### GitHub Pages（开箱即用）
+
+Sample量设计器、研究类型判定等**纯本地功能全可用**。
+「随便聊聊」需要 AI 通道：Pages 版没有后端代理，在首页 ⚙ 填入你自己的
+[DeepSeek API Key](https://platform.deepseek.com/) 即可启用（Key 只存你浏览器
+localStorage，直连 DeepSeek 官方 API，不经任何第三方服务器）。
+
+### 自托管（可提供公共 AI 通道）
+
+想让你的用户免 Key 使用聊天功能，需带一个 AI 代理后端：
+
+1. 部署 `server/me_proxy.php`（PHP + cURL），参照文件内注释配置：
+   - 上游 DeepSeek API，key 存服务端（webroot 外，640 权限）
+   - 内置每 IP 限流（默认 20 次/时/IP）与 payload 上限（60KB）
+2. 把仓库其余静态文件挂到任意 Web 服务器，`/api/me/` 路由指向该 PHP
+3. 参考实现见本仓库 git 历史中 nginx location 配置
+
+更新流程（自托管）：改代码 → git commit+push → 同步静态文件到 webroot。
 
 ## 功能
 

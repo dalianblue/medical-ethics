@@ -248,7 +248,8 @@ function saveHist() {
 /* ===== DeepSeek调用(用户key) ===== */
 async function deepseek(messages) {
   /* 1019晚: 默认走本站代理(平台预置key, 限流20次/时/IP);
-     高级用户可在首页⚙填自己的key直连(不限流) */
+     高级用户可在首页⚙填自己的key直连(不限流)。
+     1020: Pages等纯静态托管无/api/me/→NOKEY引导自填, 不报"网络异常"误导 */
   const ownKey = localStorage.getItem(KEY_LS);
   let r;
   if (ownKey) {
@@ -274,6 +275,7 @@ async function deepseek(messages) {
   }
   if (r.status === 401) throw new Error("KEYBAD");
   if (r.status === 429) throw new Error("RATE");
+  if (r.status === 404 || r.status === 405) throw new Error("NOPROXY");  /* Pages等纯静态托管 */
   if (!r.ok) throw new Error("API" + r.status);
   return (await r.json()).choices[0].message.content;
 }
@@ -310,6 +312,7 @@ async function send() {
     pend.innerHTML = renderMd(e.message === "KEYBAD" ? "⚠ API Key 无效，请到首页⚙重新填写"
                      : e.message === "NOKEY" ? "⚠ 请先在首页⚙填写 DeepSeek API Key"
                      : e.message === "RATE" ? "⚠ 本小时使用次数已达上限（20次/时/IP），请下个整点再试，或在首页⚙填入自己的 DeepSeek Key"
+                     : e.message === "NOPROXY" ? "⚠ 当前是纯静态部署（如 GitHub Pages），没有 AI 代理通道。请到首页⚙填入你自己的 DeepSeek Key 后使用聊天功能；样本量设计器无需 Key，全功能可用。"
                      : "⚠ 网络异常：" + e.message + "，请重试");
   } finally {
     _sending = false;
