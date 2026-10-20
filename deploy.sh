@@ -15,9 +15,14 @@ if [ "$DEPLOYED_HASH" != "$SRC_HASH" ]; then
     echo "bumped chat.js引用→v$NEWV"
 fi
 
+# 1.5 生成version.json(单一版本真源: commit短hash+构建时间)
+V=$(git -C $SRC log -1 --format=%h)
+printf '{"v": "%s", "built": "%s"}' "$V" "$(date +%m-%d\ %H:%M)" > $SRC/version.json
+
 # 2. 同步文件
 cp -f $SRC/index.html $SRC/chat.html $SRC/expert.html $DST/
 cp -f $SRC/assets/*.js $SRC/assets/*.css $DST/assets/
+cp -f $SRC/version.json $DST/version.json
 chown -R www:www $DST
 
 # 3. 验证: html引用版本与chat.js md5记录
