@@ -1,4 +1,5 @@
 /* 首页双入口+设置弹窗 */
+const $ = id => document.getElementById(id);
 const KEY_LS = "me_deepseek_key";
 
 $("btn-settings").onclick = () => {
