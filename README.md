@@ -37,3 +37,10 @@ sample_size.py（6公式计算书）与 render_protocol.py（answers.json→方�
 - **线上**：https://fxmlab.top/ethics/ （阿里云ECS nginx静态挂载，HTTPS复用主站证书）
 - GitHub Pages未启用（本地服务器部署替代）
 - 更新流程：改 /root/workspace/medical-ethics → git commit+push → cp到 /www/wwwroot/medical-ethics/
+
+## 适用范围 (1020更新)
+
+面向**医学全学科**通用（内科/外科/妇产/儿科/麻醉/肿瘤/神经/精神等），不限于麻醉学。
+文书结构与注册要素参考：WHO Trial Registration Data Set (TRDS v1.3.1)、
+ClinicalTrials.gov 注册规范（结局三要素/分配隐藏/IPD共享声明等）、国内三甲医院 IIT 模板。
+风险提示库当前以麻醉/围术期主题为主（持续扩充中），其他专科研究仍可正常使用设计与文书生成功能。
