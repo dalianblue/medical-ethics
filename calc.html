@@ -54,22 +54,22 @@
     </div>
     <div id="vals-two_means" class="vals" hidden>
       <label>两组预期相差多少（差值）
-        <input type="number" id="c-delta" placeholder="如 2.5" min="0" step="0.1"></label>
+        <span class="inp-unit"><input type="number" id="c-delta" placeholder="如 2.5" min="0" step="0.1"><input type="text" class="unit-in" id="c-delta-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
       <label>个体之间测量值的波动大小（标准差）
-        <input type="number" id="c-sd" placeholder="如 2" min="0" step="0.1"></label>
+        <span class="inp-unit"><input type="number" id="c-sd" placeholder="如 2" min="0" step="0.1"><input type="text" class="unit-in" id="c-sd-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
       <p class="wiz-hint">不知道波动大小？同类研究常取 1～3，也可以先填一个试试。</p>
     </div>
     <div id="vals-noninferiority" class="vals" hidden>
       <label>能接受的最大差距（比旧方法差多少仍算合格）
-        <input type="number" id="c-delta2" placeholder="如 0.5" min="0" step="0.1"></label>
+        <span class="inp-unit"><input type="number" id="c-delta2" placeholder="如 0.5" min="0" step="0.1"><input type="text" class="unit-in" id="c-delta2-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
       <label>测量值的波动大小（标准差）
-        <input type="number" id="c-sd2" placeholder="如 2" min="0" step="0.1"></label>
+        <span class="inp-unit"><input type="number" id="c-sd2" placeholder="如 2" min="0" step="0.1"><input type="text" class="unit-in" id="c-sd2-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
     </div>
     <div id="vals-tost" class="vals" hidden>
       <label>等效允许的差距范围（±多少以内算一样）
-        <input type="number" id="c-delta3" placeholder="如 0.5" min="0" step="0.1"></label>
+        <span class="inp-unit"><input type="number" id="c-delta3" placeholder="如 0.5" min="0" step="0.1"><input type="text" class="unit-in" id="c-delta3-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
       <label>测量值的波动大小（标准差）
-        <input type="number" id="c-sd3" placeholder="如 2" min="0" step="0.1"></label>
+        <span class="inp-unit"><input type="number" id="c-sd3" placeholder="如 2" min="0" step="0.1"><input type="text" class="unit-in" id="c-sd3-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
     </div>
     <div id="vals-auc_ci" class="vals" hidden>
       <label>预期这项检查的准确度（填 0.5～1 之间的小数，如 0.85）

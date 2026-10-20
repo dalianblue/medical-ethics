@@ -88,23 +88,30 @@ function syncValBlocks() {
   if (note) note.hidden = !(P.type === "noninferiority" || P.type === "tost");
 }
 function collectValues() {
+  const u = id => ($(id).value || "").trim() || "分";
   if (P.type === "two_proportions") {
     P.p1 = parseFloat($("c-p1").value) / 100;
     P.p2 = parseFloat($("c-p2").value) / 100;
+    P.deltaUnit = "%"; P.sdUnit = "";
   } else if (P.type === "two_means") {
     P.delta = parseFloat($("c-delta").value);
     P.sd = parseFloat($("c-sd").value);
+    P.deltaUnit = u("c-delta-u"); P.sdUnit = u("c-sd-u");
   } else if (P.type === "noninferiority") {
     P.delta = parseFloat($("c-delta2").value);
     P.sd = parseFloat($("c-sd2").value);
+    P.deltaUnit = u("c-delta2-u"); P.sdUnit = u("c-sd2-u");
   } else if (P.type === "tost") {
     P.delta = parseFloat($("c-delta3").value);
     P.sd = parseFloat($("c-sd3").value);
+    P.deltaUnit = u("c-delta3-u"); P.sdUnit = u("c-sd3-u");
   } else if (P.type === "auc_ci") {
     P.auc = parseFloat($("c-auc").value);
     P.ciWidth = parseFloat($("c-ciw").value);
+    P.deltaUnit = "AUC"; P.sdUnit = "";
   } else if (P.type === "correlation") {
     P.r = parseFloat($("c-r").value);
+    P.deltaUnit = "r"; P.sdUnit = "";
   }
 }
 const TYPE_LABEL = {
@@ -224,11 +231,11 @@ function buildSummary() {
   const lines = {
     two_proportions: "样本量估算：本研究为两组率的比较，预期对照组事件发生率为 " + Math.round(P.p1*100) + "%、试验组为 " + Math.round(P.p2*100) + "%，" +
       "采用双侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
-    two_means: "样本量估算：本研究为两组均数的比较，预期两组差值 δ=" + P.delta + "、标准差 SD=" + P.sd + "，" +
+    two_means: "样本量估算：本研究为两组均数的比较，预期两组差值 δ=" + P.delta + " " + P.deltaUnit + "、标准差 SD=" + P.sd + " " + P.sdUnit + "，" +
       "采用" + (P.tails === 1 ? "单侧" : "双侧") + "检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
-    noninferiority: "样本量估算：本研究采用非劣效设计，非劣效界值 Δ=" + P.delta + "、标准差 SD=" + P.sd + "，" +
+    noninferiority: "样本量估算：本研究采用非劣效设计，非劣效界值 Δ=" + P.delta + " " + P.deltaUnit + "、标准差 SD=" + P.sd + " " + P.sdUnit + "，" +
       "单侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
-    tost: "样本量估算：本研究采用等效性设计（TOST），等效界值 Δ=" + P.delta + "、标准差 SD=" + P.sd + "，" +
+    tost: "样本量估算：本研究采用等效性设计（TOST），等效界值 Δ=" + P.delta + " " + P.deltaUnit + "、标准差 SD=" + P.sd + " " + P.sdUnit + "，" +
       "双侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
     auc_ci: "样本量估算：本研究为诊断准确性试验，预期 AUC=" + P.auc + "，期望置信区间宽度 " + P.ciWidth + "（α=" + P.alpha + "），经计算需纳入 " + r.total + " 例受试者。",
     correlation: "样本量估算：本研究为相关性分析，预期相关系数 r=" + P.r + "，" +

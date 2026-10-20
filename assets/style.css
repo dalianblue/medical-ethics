@@ -249,3 +249,11 @@ footer a { color: var(--accent); }
 .sens { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 13.5px; }
 .sens th, .sens td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; }
 .sens th { background: var(--accent-weak); }
+
+/* 数值+单位组合输入 */
+.inp-unit { display: flex; gap: 6px; margin-top: 5px; }
+.inp-unit input[type=number] { flex: 1; }
+.inp-unit input[type=text] { width: 96px; flex-shrink: 0;
+  border: 1px dashed var(--line); border-radius: 8px; padding: 10px 8px; font: inherit;
+  color: var(--muted); }
+.inp-unit input[type=text]:focus { color: var(--ink); border-style: solid; }
