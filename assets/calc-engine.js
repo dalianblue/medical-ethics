@@ -315,10 +315,16 @@ function drawOne(canvasId, vary, xlabel) {
     const rr = calcN(P.type, p2);
     pts.push({ x: f, n: rr.nFinal });
   }
-  const nMax = Math.max(...pts.map(p => p.n));
+  const nMax = Math.max(...pts.map(p => p.n), 1);
+  const nMin = Math.min(...pts.map(p => p.n), 1);
+  const logMin = Math.log10(nMin), logMax = Math.log10(nMax);
+  const pyLog = n => {
+    const lg = Math.log10(Math.max(1, n));
+    return H - pad.b - ((lg - logMin) / (logMax - logMin || 1)) * (H - pad.t - pad.b);
+  };
   const pad = { l: 70, r: 20, t: 30, b: 46 };
   const px = f => pad.l + f * (W - pad.l - pad.r);
-  const py = n => H - pad.b - (n / nMax) * (H - pad.t - pad.b);
+  const py = pyLog;
   // 坐标轴
   ctx.strokeStyle = "#dde4ea"; ctx.fillStyle = "#6b7885"; ctx.font = "20px sans-serif";
   ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, H-pad.b); ctx.lineTo(W-pad.r, H-pad.b); ctx.stroke();
@@ -326,15 +332,22 @@ function drawOne(canvasId, vary, xlabel) {
   ctx.strokeStyle = "#2c5f8a"; ctx.lineWidth = 3; ctx.beginPath();
   pts.forEach((p, i) => { const X = px(p.x), Y = py(p.n); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
   ctx.stroke();
-  // 当前点
-  const curF = vary === "delta" ? (1 - 0.4) / 1.2 : (1 - 0.4) / 1.2;
-  const curN = calcN(P.type, P).nFinal;
-  const cx = px(curF), cy = py(curN);
+  // 当前点: x从扫描轴取中点, y从曲线数据线性插值——保证红点在曲线上
+  const curF = 0.5;
+  let curN = pts[0].n;
+  for (let i = 1; i < pts.length; i++) {
+    if (pts[i].x >= curF) {
+      const a = pts[i-1], b = pts[i];
+      const t = (curF - a.x) / (b.x - a.x || 1);
+      curN = a.n + (b.n - a.n) * t;
+      break;
+    }
+  }
   ctx.fillStyle = "#b04a3a"; ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 7); ctx.fill();
   ctx.fillStyle = "#24313c"; ctx.font = "24px sans-serif";
   ctx.fillText("当前: " + curN + "例", Math.min(cx + 12, W - 140), cy - 10);
   // 轴标
-  ctx.fillText("n", pad.l - 50, pad.t + 10);
+  ctx.fillText("n (对数刻度)", pad.l - 10, pad.t + 10);
   ctx.fillText(xlabel || "", pad.l, H - 8);
 }
 
