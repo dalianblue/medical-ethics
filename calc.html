@@ -45,6 +45,7 @@
   <!-- 第2步 -->
   <section class="wiz-step card" hidden>
     <h2>第 2 步 · 预期数值是多少？</h2>
+    <p class="wiz-hint" id="type-echo" style="color:var(--accent); font-weight:600"></p>
     <div id="vals-two_proportions" class="vals">
       <label>目前常规做法下，这件事的发生率（%）
         <input type="number" id="c-p1" placeholder="如 10" min="0" max="100" step="0.1"></label>
@@ -147,7 +148,7 @@
 </main>
 
 <footer>样本量设计器 · <span id="app-version">…</span> · 计算结果供设计参考，最终样本量辩护归统计师</footer>
-<script src="assets/calc-engine.js?v=2"></script>
+<script src="assets/calc-engine.js?v=3"></script>
 <script src="assets/version.js"></script>
 </body>
 </html>

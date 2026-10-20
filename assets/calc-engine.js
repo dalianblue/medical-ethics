@@ -66,6 +66,8 @@ const P = { alpha: 0.05, power: 0.80, tails: 2, dropout: 0.20, ratio: 1 };
 function $(id) { return document.getElementById(id); }
 
 function syncValBlocks() {
+  /* 切换类型: 清空全部参数输入, 防旧值残留误导(1020施主卡第2步的场景) */
+  document.querySelectorAll("#vals-two_proportions input, #vals-two_means input, #vals-noninferiority input, #vals-tost input, #vals-auc_ci input, #vals-correlation input").forEach(el => el.value = "");
   const map = {
     two_proportions: "vals-two_proportions",
     two_means: "vals-two_means",
@@ -100,8 +102,18 @@ function collectValues() {
     P.r = parseFloat($("c-r").value);
   }
 }
+const TYPE_LABEL = {
+  two_proportions: "两组的发生比例比较",
+  two_means: "两组的评分或测量值平均数比较",
+  noninferiority: "新方法不比旧方法差太多（非劣效）",
+  tost: "两种方法效果一样（等效）",
+  auc_ci: "一项诊断检查的准确度",
+  correlation: "两个指标之间的关联程度",
+};
 function showStep(n) {
   cStep = n;
+  const echo = document.getElementById("type-echo");
+  if (echo) echo.textContent = P.type ? ("您在第 1 步选择的是：" + (TYPE_LABEL[P.type] || P.type)) : "";
   document.querySelectorAll(".wiz-step").forEach((el, i) => el.hidden = i !== n);
   document.querySelectorAll(".wiz-dot").forEach((el, i) => el.classList.toggle("on", i <= n));
   $("btn-prev").hidden = n === 0;
