@@ -35,14 +35,36 @@ sample_size.py（6公式计算书）与 render_protocol.py（answers.json→方�
 
 ## 部署
 
-纯静态站点，两种玩法：
+纯静态站点，三种玩法（按动手意愿排序）：
 
-### GitHub Pages（开箱即用）
+### 直接用（零部署）
 
-Sample量设计器、研究类型判定等**纯本地功能全可用**。
-「随便聊聊」需要 AI 通道：Pages 版没有后端代理，在首页 ⚙ 填入你自己的
-[DeepSeek API Key](https://platform.deepseek.com/) 即可启用（Key 只存你浏览器
-localStorage，直连 DeepSeek 官方 API，不经任何第三方服务器）。
+打开 https://dalianblue.github.io/medical-ethics/ 即可。
+样本量设计器、研究类型判定等**纯本地功能开箱即用**；「随便聊聊」需在首页 ⚙
+填入你自己的 [DeepSeek API Key](https://platform.deepseek.com/)（Key 只存你
+浏览器 localStorage，直连 DeepSeek 官方 API，不经第三方服务器）。
+
+### 用 WorkBuddy 部署（不会命令行的朋友）
+
+[WorkBuddy](https://www.workbuddy.cn/)（腾讯 AI 工作台）可以替你完成整个部署。
+安装后新建任务，把下面这段话整段发给它：
+
+```
+请帮我部署一个开源的医学研究伦理申请助手（纯静态网页，无需编译）：
+
+1. 执行 git clone https://github.com/dalianblue/medical-ethics.git
+2. 进入目录，启动一个本地静态服务器（如 python3 -m http.server 8080），
+   在浏览器打开 http://localhost:8080 验证首页、样本量设计器（calc.html）、
+   聊天页（chat.html）三个页面都能正常显示。
+3. 「样本量设计器」开箱即用，无需任何账号。
+4. 「随便聊聊」需要 AI 通道：请提醒我到 https://platform.deepseek.com/
+   注册并创建 API Key，然后点首页右上角 ⚙ 粘贴保存。Key 只存在浏览器
+   localStorage，直连 DeepSeek 官方接口。不要把我的 Key 写进任何文件、
+   截图或对话记录。
+5. 完成后告诉我：访问地址、怎么日常启动、怎么停止。
+
+注意：这是 AGPL-3.0 开源项目，不要修改它的许可与版权信息。
+```
 
 ### 自托管（可提供公共 AI 通道）
 
