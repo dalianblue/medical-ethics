@@ -122,16 +122,16 @@ function validateStep(n) {
   if (STEPS5[n] === "compare" && !P.type) { alert("请先选择你要比较的内容"); return false; }
   if (STEPS5[n] === "values") {
     if (P.type === "two_proportions" && (!(P.p1 > 0 && P.p1 < 1) || !(P.p2 > 0 && P.p2 < 1) || P.p1 === P.p2)) {
-      alert("请填写两个不同的发生率（0～100%之间）"); return false;
+      alert("两组的发生率请填 0～100 之间的数字（百分数，不用带%号），且两组不能相同。\n\n如果您想比较的不是发生率，请返回第 1 步重新选择。"); return false;
     }
     if (["two_means","noninferiority","tost"].includes(P.type) && (!(P.delta > 0) || !(P.sd > 0))) {
-      alert("请填写预期差值和标准差（都要大于0）"); return false;
+      alert("差值和波动大小都请填大于 0 的数字。\n\n不知道波动大小填多少？同类研究常取 1～3，先填 2 试试。"); return false;
     }
     if (P.type === "auc_ci" && (!(P.auc > 0.5 && P.auc < 1) || !(P.ciWidth > 0 && P.ciWidth < 1))) {
-      alert("请填写AUC（0.5～1之间）和期望的置信区间宽度"); return false;
+      alert("准确度请填 0.5～1 之间的小数（如 0.85），精确范围也是 0～1 的小数（如 0.1）。\n\n注意：这两项都是小数，不填百分数。"); return false;
     }
     if (P.type === "correlation" && !(Math.abs(P.r) > 0 && Math.abs(P.r) < 1)) {
-      alert("请填写预期相关系数（-1～1之间，不为0）"); return false;
+      alert("关联程度请填 -1～1 之间的小数（0.2 弱、0.4 中等、0.6 强，如填 0.4）。\n\n若您其实想比较两组的数值高低，请返回第 1 步选择『两组的评分或测量值平均数』。"); return false;
     }
   }
   return true;

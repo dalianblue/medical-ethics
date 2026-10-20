@@ -71,15 +71,16 @@
         <input type="number" id="c-sd3" placeholder="如 2" min="0" step="0.1"></label>
     </div>
     <div id="vals-auc_ci" class="vals" hidden>
-      <label>预期这项检查的准确度 AUC（0.5～1）
+      <label>预期这项检查的准确度（填 0.5～1 之间的小数，如 0.85）
         <input type="number" id="c-auc" placeholder="如 0.85" min="0.5" max="1" step="0.01"></label>
-      <label>希望估计的精确范围（置信区间宽度，越小越精确）
+      <label>希望估计的精确范围（0～1 之间的小数，越小越精确，如 0.1）
         <input type="number" id="c-ciw" placeholder="如 0.1" min="0" max="1" step="0.01"></label>
+      <p class="wiz-hint">⚠ 这两项填小数，不填百分数。</p>
     </div>
     <div id="vals-correlation" class="vals" hidden>
-      <label>预期的相关程度（-1～1 之间）
+      <label>预期的关联程度（填 -1～1 之间的小数，如 0.4 表示中等关联）
         <input type="number" id="c-r" placeholder="如 0.4" min="-1" max="1" step="0.05"></label>
-      <p class="wiz-hint">0.2 以下很弱 · 0.4 左右中等 · 0.6 以上较强</p>
+      <p class="wiz-hint">参考：0.2 以下很弱 · 0.4 左右中等 · 0.6 以上较强。⚠ 不是填百分数——若您想比较两组数值的高低，请返回第 1 步选『两组的评分或测量值平均数』。</p>
     </div>
   </section>
 
@@ -146,7 +147,7 @@
 </main>
 
 <footer>样本量设计器 · <span id="app-version">…</span> · 计算结果供设计参考，最终样本量辩护归统计师</footer>
-<script src="assets/calc-engine.js"></script>
+<script src="assets/calc-engine.js?v=2"></script>
 <script src="assets/version.js"></script>
 </body>
 </html>
