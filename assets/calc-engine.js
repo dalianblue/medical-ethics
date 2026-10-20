@@ -296,3 +296,8 @@ function drawOne(canvasId, vary, xlabel) {
   ctx.fillText("n", pad.l - 50, pad.t + 10);
   ctx.fillText(xlabel || "", pad.l, H - 8);
 }
+
+function markSelected(input) {
+  document.querySelectorAll(".opt").forEach(l => l.classList.remove("selected"));
+  input.closest(".opt").classList.add("selected");
+}
