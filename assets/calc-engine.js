@@ -84,6 +84,8 @@ function syncValBlocks() {
     if (el) el.hidden = P.type !== ty;
   }
   // 非劣效/等效的第2步输入id是c-delta2/c-sd2等, collectValues里按类型读对应id
+  const note = document.getElementById("alpha-note");
+  if (note) note.hidden = !(P.type === "noninferiority" || P.type === "tost");
 }
 function collectValues() {
   if (P.type === "two_proportions") {

@@ -76,7 +76,7 @@
         <input type="number" id="c-auc" placeholder="如 0.85" min="0.5" max="1" step="0.01"></label>
       <label>希望估计的精确范围（0～1 之间的小数，越小越精确，如 0.1）
         <input type="number" id="c-ciw" placeholder="如 0.1" min="0" max="1" step="0.01"></label>
-      <p class="wiz-hint">⚠ 这两项填小数，不填百分数。</p>
+      <p class="wiz-hint">⚠ 这两项填小数，不填百分数。样本量按经典近似式估算（未含病例对照比校正），供设计参考。</p>
     </div>
     <div id="vals-correlation" class="vals" hidden>
       <label>预期的关联程度（填 -1～1 之间的小数，如 0.4 表示中等关联）
@@ -93,6 +93,7 @@
         <option value="0.05" selected>0.05 —— 常规标准（推荐）</option>
         <option value="0.01">0.01 —— 更严格</option>
       </select></label>
+      <p class="wiz-hint" id="alpha-note" hidden>⚠ 非劣效/等效设计时 α 按单侧口径使用（这是这类设计的统计惯例）。</p>
     <label>把握度（能真正发现差异的概率）
       <select id="c-power">
         <option value="0.80">80% —— 常规标准（推荐）</option>
@@ -117,7 +118,7 @@
     <label>两组人数比例
       <select id="c-ratio">
         <option value="1" selected>1 : 1（两组人数相同）</option>
-        <option value="2">2 : 1（对照组人数翻倍）</option>
+        <option value="2">2 : 1（对照组人数翻倍；总例数按方差效率上浮，偏保守）</option>
       </select></label>
   </section>
 
@@ -148,7 +149,7 @@
 </main>
 
 <footer>样本量设计器 · <span id="app-version">…</span> · 计算结果供设计参考，最终样本量辩护归统计师</footer>
-<script src="assets/calc-engine.js?v=7"></script>
+<script src="assets/calc-engine.js?v=8"></script>
 <script src="assets/version.js"></script>
 </body>
 </html>
