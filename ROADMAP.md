@@ -1,0 +1,45 @@
+# medical-ethics 路线图
+
+> 医学研究伦理申请助手（全学科通用）— fxmlab.top/me/
+> 原则：纯本地计算数据不出浏览器 · 提交按钮永远研究者亲手点 · 无依据不编造
+
+## 已完成 ✅
+
+- 双模式入口（随便聊聊 AI 引导员 / 专家模式四步表单）
+- 随便聊聊：DeepSeek 六阶段引导（idea→type→enroll→sample→ethics→generate）
+- 生成文书：研究方案 + 知情同意书 + 研究要素（===PROTOCOL===/===CONSENT=== 分隔符协议）
+- 设计类型判定三层防线：服务端强制分类注入 → GEN_SYS 设计自适应 → 成稿违禁词校验自愈
+- 风险提示库：second-brain 12k 卡蒸馏 18 主题（发生率+来源，随夜间蒸馏扩充）
+- 术式入路校验：腹腔镜/经尿道/开放等互斥入路混列检测（term_index 7.8k 术语）
+- 临床事实边界：术式/药物名称不扩展不举例，拿不准标【待补充】
+- 医学通用化 + CT.gov/WHO TRDS 要素融合（结局三要素/通用名/DMC/IPD 共享/双联系）
+- 平台预置 DeepSeek key（/api/me/ 代理，60 次/h/IP，正式发布时撤）
+- 微信 webview 适配（气泡/MD 渲染/no-store/下载降级复制弹层）
+
+## 进行中 🔨
+
+- 真实用户测试迭代（施主验收中，当前 8/10）
+
+## 排队 📋
+
+- **生成质量继续打磨**：研究路线（分阶段路线图细化）与知情同意书深度
+  ——当前重点（施主 1020 指定优先）
+- JEV (TypeSafe System One) 接入设计分类器：key 到位后 server 端 /classify 换 jev-latest
+- 术式/药物风险词表扩充：随夜间蒸馏自动更新
+- 医学版 idea-evaluator / 批判性阅读清单（借 Supervisor-Skills 方法论）
+
+## 排队（发布相关）📌
+
+- 撤预置 key（删 me_config.php + me_proxy.php，前端引导用户自填）
+- GitHub Pages 或独立域名正式发布页
+- 风险库扩展到其他专科（肿瘤/内科/儿科…）
+
+## 想法池 💡
+
+- **浏览器插件**（Chrome MV3，Edge/国产浏览器白送，Safari 后置）：
+  popup 导入 answers.json → content script 按 chictr_field_mapping.json
+  预填 ChiCTR/NCT 表单（只填不提交，铁律不破）。
+  优势：登录态天然合规 / 实时读 DOM 抗改版 / 产品化闭环。
+  状态：方案评估完成（1020），**不急，等文书质量打磨好后开工**（施主 1020 定）。
+- Safari / iOS 版插件（Xcode 包装，插件成熟后视需求）
+- PDF 指南入库管线自动化（施主丢 PDF → 自动蒸馏入卡，现为手动半自动）
