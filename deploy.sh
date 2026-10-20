@@ -29,7 +29,7 @@ V=$(git -C $SRC log -1 --format=%h)
 printf '{"v": "%s", "built": "%s"}' "$V" "$(date +%m-%d\ %H:%M)" > $SRC/version.json
 
 # 2. 同步文件
-cp -f $SRC/index.html $SRC/chat.html $SRC/expert.html $DST/
+cp -f $SRC/index.html $SRC/chat.html $SRC/expert.html $SRC/calc.html $DST/
 cp -f $SRC/assets/*.js $SRC/assets/*.css $DST/assets/
 cp -f $SRC/version.json $DST/version.json
 chown -R www:www $DST
