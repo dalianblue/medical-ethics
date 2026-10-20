@@ -24,6 +24,15 @@ if [ "$CSS_DEPLOYED" != "$CSS_SRC" ]; then
     echo "bumped style.css引用→v$NEWC"
 fi
 
+# calc-engine.js变化→bump calc.html引用(1020 dogfood补: 原清单漏calc-engine, 改了不bump=微信webview吃旧缓存)
+CE_DEPLOYED=$(md5sum $DST/assets/calc-engine.js 2>/dev/null | cut -d' ' -f1)
+CE_SRC=$(md5sum $SRC/assets/calc-engine.js | cut -d' ' -f1)
+if [ "$CE_DEPLOYED" != "$CE_SRC" ]; then
+    NEWCE=$(( $(grep -oP 'calc-engine\.js\?v=\K[0-9]+' $SRC/calc.html | head -1) + 1 ))
+    sed -i "s/calc-engine\.js?v=[0-9]*/calc-engine.js?v=$NEWCE/g" $SRC/calc.html
+    echo "bumped calc-engine.js引用→v$NEWCE"
+fi
+
 # 1.5 生成version.json(单一版本真源: commit短hash+构建时间)
 V=$(git -C $SRC log -1 --format=%h)
 printf '{"v": "%s", "built": "%s"}' "$V" "$(date +%m-%d\ %H:%M)" > $SRC/version.json

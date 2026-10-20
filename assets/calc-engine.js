@@ -343,6 +343,7 @@ function drawOne(canvasId, vary, xlabel) {
       break;
     }
   }
+  const cx = px(curF), cy = py(curN);  /* 1020 dogfood修复: fdd3d84重构遗留未定义cx/cy→红点崩+第二图全白 */
   ctx.fillStyle = "#b04a3a"; ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 7); ctx.fill();
   ctx.fillStyle = "#24313c"; ctx.font = "24px sans-serif";
   ctx.fillText("当前: " + curN + "例", Math.min(cx + 12, W - 140), cy - 10);

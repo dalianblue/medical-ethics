@@ -17,6 +17,7 @@ const STAGES = [
 
 let stage = localStorage.getItem(STAGE_LS) || "idea";
 let _ready = stage === "generate";
+let _sending = false;  /* 1020 dogfood修复: 3eb4fbe声称防重入但变量从未声明, strict下每条消息抛ReferenceError */
 let history = JSON.parse(localStorage.getItem(HISTORY_LS) || "[]");
 
 const sysPrompt = `你是医学研究伦理申请的引导员，帮助临床研究者把模糊的想法整理成合格的伦理申请材料。
@@ -277,6 +278,8 @@ async function deepseek(messages) {
 async function send() {
   const q = $("chat-input").value.trim();
   if (!q) return;
+  if (_sending) return;  /* 防重入守卫(3eb4fbe意图, 1020 dogfood补齐) */
+  _sending = true;
   $("chat-input").value = "";
   history.push({ role: "user", content: q });
   bubble("user", q);
