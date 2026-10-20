@@ -202,6 +202,14 @@ function nextStage() {
 }
 
 /* ===== UI ===== */
+function isNearBottom() {
+  const el = $("chat-history");
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+}
+function scrollToBottom() {
+  const el = $("chat-history");
+  el.scrollTop = el.scrollHeight;
+}
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -223,8 +231,9 @@ function bubble(role, text, isHtml) {
   if (isHtml) el.innerHTML = text; else el.innerHTML = renderMd(text);
   row.appendChild(avatar);
   row.appendChild(el);
+  const stick = isNearBottom();
   $("chat-history").appendChild(row);
-  $("chat-history").scrollTop = $("chat-history").scrollHeight;
+  if (stick) scrollToBottom();
   return el;
 }
 function saveHist() {
@@ -271,12 +280,14 @@ async function send() {
   $("chat-input").value = "";
   history.push({ role: "user", content: q });
   bubble("user", q);
+  const sticky = isNearBottom();
   const pend = bubble("ai", "…");
   try {
     let answer = await deepseek(history);
     const markM = answer.match(/\[STAGE:([a-z]+)\]|\[READY\]\s*$/i);
     answer = answer.replace(/\n?\[(?:STAGE:[a-z]+|READY)\]\s*$/i, "").trim();
     pend.innerHTML = renderMd(answer);
+    if (sticky) scrollToBottom();
     history.push({ role: "assistant", content: answer });
     if (markM) {
       if (/READY/i.test(markM[0])) { stage = "generate"; _ready = true; }
