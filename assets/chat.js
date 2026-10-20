@@ -199,13 +199,22 @@ async function fetchSimilarAE(historyArr) {
   const kws = extractKeywords(joined);
   if (!kws.length) return "";
   const cacheKey = "ae|" + kws.join("|");
-  if (_aeCache.key === cacheKey) return _aeCache.block;
+  const now = Date.now();
+  /* 负缓存TTL 10分钟(1020独立审查建议): 瞬态故障缓存空块会禁用聚合到换词为止, 加TTL自愈 */
+  if (_aeCache.key === cacheKey && (_aeCache.block || (now - (_aeCache.t || 0)) < 600000)) return _aeCache.block;
   try {
-    const q = encodeURIComponent(kws.join(" "));  /* AND语义(1020实测): OR会把"Laparoscopy"泛化混入不相关专科试验; AND精准锚定术式 */
+    const q = encodeURIComponent(kws.join(" "));  /* AND语义(1020实测): OR会把"Laparoscopy"泛化混入不相关专科试验; AND精准锚定术式。
+                                                     ORG_MAP值内的"|"是刻意的组内OR: (Uterine Myoma|Hysterectomy) AND Laparoscopy */
     const url = "https://clinicaltrials.gov/api/v2/studies?query.cond=" + q
       + "&pageSize=6&filter.advanced=" + encodeURIComponent("AREA[HasResults]YES");
-    const r = await fetch(url);
-    if (!r.ok) { _aeCache = { key: cacheKey, block: "" }; return ""; }
+    /* AbortController超时8s(1020独立审查建议): 防CT.gov挂起拖住文书生成; 不用AbortSignal.timeout(微信老webview不支持) */
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    let r;
+    try {
+      r = await fetch(url, { signal: ctrl.signal });
+    } finally { clearTimeout(timer); }
+    if (!r.ok) { _aeCache = { key: cacheKey, block: "", t: now }; return ""; }
     const d = await r.json();
     const studies = d.studies || [];
     /* 聚合: term → {trials:Set(NCT), organSystem} */
@@ -226,7 +235,7 @@ async function fetchSimilarAE(historyArr) {
         terms[term].trials.add(nct);
       }
     }
-    if (!trialsWithAE) { _aeCache = { key: cacheKey, block: "" }; return ""; }
+    if (!trialsWithAE) { _aeCache = { key: cacheKey, block: "", t: now }; return ""; }
     /* 排序: 出现于更多试验者优先; 取前12条 */
     const ranked = Object.entries(terms)
       .sort((a, b) => b[1].trials.size - a[1].trials.size)
@@ -244,7 +253,7 @@ async function fetchSimilarAE(historyArr) {
     _aeCache = { key: cacheKey, block: s };
     return s;
   } catch (e) {
-    _aeCache = { key: cacheKey, block: "" };
+    _aeCache = { key: cacheKey, block: "", t: now };
     return "";  // 静默降级
   }
 }
