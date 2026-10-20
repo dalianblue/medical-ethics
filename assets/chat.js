@@ -27,7 +27,7 @@ const sysPrompt = `你是医学研究伦理申请的引导员，帮助临床研�
 2.type：判定研究类型（干预性vs观察性；前瞻vs回顾），并告知注册义务（干预性必须注册ChiCTR/NCT；观察性走STROBE清单）
 3.enroll：收集纳入标准、排除标准（引导用户逐条说，你整理成规范表述——按CT.gov资格标准结构：年龄/性别/病种与分期/合并症/安全排除项如器官功能与禁忌用药）
 4.sample：收集主要结局时按CT.gov三要素引导——结局名称（不用缩写）+用什么量表或方法测量+在什么时间点测（如"术后24小时用VAS测疼痛"）。缺任一要素就追问。次要结局同样三要素。然后建议样本量计算方法（两率比较/均值比较/非劣效/TOST/AUC CI宽度/相关性），帮助估算样本量（如用户给了参数请直接计算给出数字）
-5.ethics：知情同意方式（签署同意书 or 豁免——豁免需用户给出至少3条论证理由，你来帮他完善表述）
+5.ethics：知情同意方式（签署同意书 or 豁免——豁免需用户给出至少3条论证理由，你来帮他完善表述）。此阶段还需收集**术式/干预的专科特异性风险**：请研究者以专科专家身份列出3-5条该术式/干预的常见与严重并发症（他们说的大多比通用知识库更准），你负责整理成规范表述；若研究者说"你列吧"，则参考你掌握的专科知识给出草案并明确提醒"发生率数字请务必核定"。这些风险将写入知情同意书并由研究者最终核定
 6.generate：信息齐全后输出全部要素总结清单
 
 【阶段推进规则——最重要】
@@ -139,9 +139,22 @@ function extractKeywords(text) {
   }
   const e = t.match(/[A-Za-z]{4,}(?: syndrome| block| inhibitors?| cancer|ectomy)/gi);
   if (e) kws.push(...e.map(x => x.toLowerCase()).slice(0, 2));
+  /* 中文术式→英文后缀(1020): "X切除/剔除/切除术"提取病位词+ectomy系列; 配合ZH2EN把妇科/外科对话拉对试验 */
+  const zhEctomy = t.match(/(子宫|卵巢|输卵管|胆囊|阑尾|甲状腺|乳腺|肺叶|肝|肾|前列腺|胃|直肠|结肠|扁桃体)(?:肌瘤)?(切除|剔除|切除术)/g);
+  if (zhEctomy) {
+    const ORG_MAP = { "子宫":"Uterine Myoma|Hysterectomy", "卵巢":"Ovarian", "输卵管":"Salpingectomy",
+      "胆囊":"Cholecystectomy", "阑尾":"Appendectomy", "甲状腺":"Thyroidectomy", "乳腺":"Mastectomy",
+      "肺叶":"Lobectomy", "肝":"Hepatectomy", "肾":"Nephrectomy", "前列腺":"Prostatectomy",
+      "胃":"Gastrectomy", "直肠":"Proctectomy", "结肠":"Colectomy", "扁桃体":"Tonsillectomy" };
+    for (const m of zhEctomy.slice(0, 2)) {
+      const org = Object.keys(ORG_MAP).find(o => m.startsWith(o));
+      if (org) kws.push(ORG_MAP[org]);
+    }
+  }
   return [...new Set(kws)].slice(0, 3);
 }
 let _ctgovCache = { key: "", block: "" };
+let _aeCache = { key: "", block: "" };
 async function fetchSimilarTrials(historyArr) {
   const joined = historyArr.map(m => m.content).join(" ");
   const kws = extractKeywords(joined);
@@ -175,6 +188,64 @@ async function fetchSimilarTrials(historyArr) {
     return s;
   } catch (e) {
     return "";  // CT.gov不可达时静默跳过(不阻塞生成, 不重试轰炸)
+  }
+}
+/* CT.gov同类研究AE聚合(1020施主拍板: 全科风险兜底)——
+   原理: HasResults=YES的试验才带resultsSection.adverseEventsModule(实测6/6全带);
+   聚合N项同类试验的AE条目→按"出现在几项试验中"排序→生成风险骨架。
+   纪律: 每次生成+1次请求(与范本查询独立缓存), 失败静默, 无发生率编造。 */
+async function fetchSimilarAE(historyArr) {
+  const joined = historyArr.map(m => m.content).join(" ");
+  const kws = extractKeywords(joined);
+  if (!kws.length) return "";
+  const cacheKey = "ae|" + kws.join("|");
+  if (_aeCache.key === cacheKey) return _aeCache.block;
+  try {
+    const q = encodeURIComponent(kws.join(" "));  /* AND语义(1020实测): OR会把"Laparoscopy"泛化混入不相关专科试验; AND精准锚定术式 */
+    const url = "https://clinicaltrials.gov/api/v2/studies?query.cond=" + q
+      + "&pageSize=6&filter.advanced=" + encodeURIComponent("AREA[HasResults]YES");
+    const r = await fetch(url);
+    if (!r.ok) { _aeCache = { key: cacheKey, block: "" }; return ""; }
+    const d = await r.json();
+    const studies = d.studies || [];
+    /* 聚合: term → {trials:Set(NCT), organSystem} */
+    const terms = {};
+    let trialsWithAE = 0;
+    for (const st of studies) {
+      const aem = ((st.resultsSection || {}).adverseEventsModule) || {};
+      const nct = ((st.protocolSection || {}).identificationModule || {}).nctId || "";
+      const all = (aem.otherEvents || []).concat(aem.seriousEvents || []);
+      if (!all.length) continue;
+      trialsWithAE++;
+      const seen = new Set();
+      for (const org of all) {
+        const term = (org.term || "").trim();
+        if (!term || term.length < 4 || seen.has(term)) continue;
+        seen.add(term);
+        if (!terms[term]) terms[term] = { trials: new Set(), organ: org.organSystem || "" };
+        terms[term].trials.add(nct);
+      }
+    }
+    if (!trialsWithAE) { _aeCache = { key: cacheKey, block: "" }; return ""; }
+    /* 排序: 出现于更多试验者优先; 取前12条 */
+    const ranked = Object.entries(terms)
+      .sort((a, b) => b[1].trials.size - a[1].trials.size)
+      .slice(0, 12);
+    let s = "\n【CT.gov同类研究不良事件聚合——跨" + trialsWithAE + "项已完成同类试验】\n";
+    s += "下列条目按「出现在几项同类注册试验的不良事件表中」排序(格式: 条目[出现试验数/N]):\n";
+    for (const [term, info] of ranked) {
+      s += "- " + term + " [" + info.trials.size + "/" + trialsWithAE + "项试验]" + (info.organ ? " (" + info.organ + ")" : "") + "\n";
+    }
+    s += "使用规则(严格遵守):\n";
+    s += "1. 这些条目是同类研究的真实不良事件记录, 可作为风险章节的条目骨架, 但「出现于N项试验」不是发生率——禁止把它换算成百分比写入文书。\n";
+    s += "2. 风险章节引用格式: 「同类注册研究中亦有报告(CT.gov NCT记录)」; 发生率处一律写【发生率待术者核定】, 不得编造数字。\n";
+    s += "3. 研究背景(引言)可引用: 「CT.gov已注册多项同类研究」并列出前3项NCT号——这是可验证的真实引用。\n";
+    s += "4. 麻醉/围术期轴若另有风险库条目(含教科书来源与发生率), 优先用库条目; 本聚合条目用于补充术式特异性风险。\n";
+    _aeCache = { key: cacheKey, block: s };
+    return s;
+  } catch (e) {
+    _aeCache = { key: cacheKey, block: "" };
+    return "";  // 静默降级
   }
 }
 function riskContextBlock(text) {
@@ -356,7 +427,7 @@ const GEN_SYS = `你是一名精通临床医学与临床研究方法学的医学
     | 躁动评分(RASS) | | ✓ | | | |
     (时间点列按对话中确认的随访计划定, 未确认的标【待补充】)
 ## 四、研究的风险和获益；补偿、赔偿措施；受试者保护措施
-### （一）风险和获益 (逐条风险+防控+获益; 上下文有风险库条目则逐条引用发生率与来源)
+### （一）风险和获益 (逐条风险+防控+获益; 上下文有风险库条目则逐条引用发生率与来源; 有CT.gov同类研究AE聚合条目则作为术式特异性风险骨架——引用格式「同类注册研究中亦有报告(CT.gov NCT记录)」+【发生率待术者核定】, 禁止把试验出现频次换算成百分比; 无任何条目时不得编造发生率数字, 逐条标【发生率待术者核定】)
 ### （二）补偿、赔偿措施
 ### （三）隐私保护、风险控制和安全保护
 ## 五、质量控制与研究监测 (依从性/数据核查/中止标准; 较大干预性研究写明是否设独立数据监查委员会DMC)
@@ -377,7 +448,7 @@ async function generateDocs() {
     const body = {
       model: "deepseek-chat", temperature: 0.3,
       messages: [
-        { role: "system", content: GEN_SYS + (await designBlockAsync(history)) + (await fetchSimilarTrials(history)) + riskContextBlock(history.map(m => m.content).join(" ")) },
+        { role: "system", content: GEN_SYS + (await designBlockAsync(history)) + (await fetchSimilarTrials(history)) + (await fetchSimilarAE(history)) + riskContextBlock(history.map(m => m.content).join(" ")) },
         ...history.slice(-30),
       ],
     };
