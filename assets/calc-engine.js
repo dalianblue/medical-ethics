@@ -198,10 +198,20 @@ function renderResult() {
 
 /* ===== canvas曲线: n随δ(或p2)变化 ===== */
 function drawCurves() {
-  drawOne("canvas-delta", "delta");
-  drawOne("canvas-sd", "sd");
+  /* 按研究类型选扫描参数(1020施主截图: correlation扫δ/SD=水平线) */
+  const byType = {
+    two_proportions: [["canvas-delta", "p2", "对照/试验组发生率变化(当前值的40%～160%)"], ["canvas-sd", "p1", "基线组发生率变化(当前值的40%～160%)"]],
+    two_means: [["canvas-delta", "delta", "预期差值δ（相对当前值的40%～160%）"], ["canvas-sd", "sd", "标准差SD（相对当前值的40%～160%）"]],
+    noninferiority: [["canvas-delta", "delta", "非劣效界值Δ（相对当前值的40%～160%）"], ["canvas-sd", "sd", "标准差SD（相对当前值的40%～160%）"]],
+    tost: [["canvas-delta", "delta", "等效界值Δ（相对当前值的40%～160%）"], ["canvas-sd", "sd", "标准差SD（相对当前值的40%～160%）"]],
+    auc_ci: [["canvas-delta", "auc", "预期AUC（当前值的80%～105%）"], ["canvas-sd", "ciWidth", "置信区间宽度（当前值的60%～160%）"]],
+    correlation: [["canvas-delta", "r", "关联程度r（当前值的60%～140%）"], ["canvas-sd", "r2", "关联程度r（另一区间，观察非线性）"]],
+  };
+  const conf = byType[P.type] || [["canvas-delta", "delta", "预期差值δ"], ["canvas-sd", "sd", "标准差SD"]];
+  drawOne(conf[0][0], conf[0][1], conf[0][2]);
+  drawOne(conf[1][0], conf[1][1], conf[1][2]);
 }
-function drawOne(canvasId, vary) {
+function drawOne(canvasId, vary, xlabel) {
   const cv = $(canvasId);
   if (!cv) return;
   const ctx = cv.getContext("2d");
@@ -213,8 +223,14 @@ function drawOne(canvasId, vary) {
   for (let i = 1; i <= 40; i++) {
     const f = i / 40;
     const p2 = {...P};
-    if (vary === "delta") p2.delta = P.delta * (0.4 + f * 1.2);   // δ从40%到160%
-    else p2.sd = P.sd * (0.4 + f * 1.2);
+    if (vary === "delta") p2.delta = P.delta * (0.4 + f * 1.2);
+    else if (vary === "sd") p2.sd = P.sd * (0.4 + f * 1.2);
+    else if (vary === "p1") p2.p1 = Math.min(0.99, Math.max(0.01, P.p1 * (0.4 + f * 1.2)));
+    else if (vary === "p2") p2.p2 = Math.min(0.99, Math.max(0.01, P.p2 * (0.4 + f * 1.2)));
+    else if (vary === "auc") p2.auc = Math.min(0.99, Math.max(0.51, P.auc * (0.8 + f * 0.25)));
+    else if (vary === "ciWidth") p2.ciWidth = P.ciWidth * (0.6 + f);
+    else if (vary === "r") p2.r = Math.min(0.95, Math.max(0.05, P.r * (0.6 + f * 0.8)));
+    else if (vary === "r2") p2.r = Math.min(0.95, Math.max(0.05, P.r * (1.0 + f * 0.8)));
     const rr = calcN(P.type, p2);
     pts.push({ x: f, n: rr.nFinal });
   }
@@ -238,6 +254,5 @@ function drawOne(canvasId, vary) {
   ctx.fillText("当前: " + curN + "例", Math.min(cx + 12, W - 140), cy - 10);
   // 轴标
   ctx.fillText("n", pad.l - 50, pad.t + 10);
-  const xlabel = vary === "delta" ? "预期差值δ（相对当前值的40%～160%）" : "标准差SD（相对当前值的40%～160%）";
-  ctx.fillText(xlabel, pad.l, H - 8);
+  ctx.fillText(xlabel || "", pad.l, H - 8);
 }
