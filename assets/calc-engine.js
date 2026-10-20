@@ -122,7 +122,7 @@ function showStep(n) {
   document.querySelectorAll(".wiz-step").forEach((el, i) => el.hidden = i !== n);
   document.querySelectorAll(".wiz-dot").forEach((el, i) => el.classList.toggle("on", i <= n));
   $("btn-prev").hidden = n === 0;
-  $("btn-next").hidden = n === STEPS5.length - 1;
+  $("btn-next").hidden = n === 0 || n === STEPS5.length - 1;  // 第1步点卡片直接进入, 无需下一步
   if (STEPS5[n] === "result") requestAnimationFrame(() => requestAnimationFrame(renderResult));
 }
 

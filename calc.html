@@ -22,22 +22,22 @@
   <section class="wiz-step card">
     <h2>第 1 步 · 你想比较什么？</h2>
     <p class="wiz-hint">选一个最接近你研究目的的选项（选完就能确定计算方法）。</p>
-    <label class="opt"><input type="radio" name="w-type" value="two_proportions" onchange="P.type=this.value; syncValBlocks(); markSelected(this)">
+    <label class="opt"><input type="radio" name="w-type" value="two_proportions" onchange="P.type=this.value; syncValBlocks(); markSelected(this); setTimeout(next, 180)">
       <b>两组中某件事的发生比例</b>
       <small>例如：常规治疗组止痛有效率和骶麻组相比；两组感染率、发生率谁高谁低</small></label>
-    <label class="opt"><input type="radio" name="w-type" value="two_means" onchange="P.type=this.value; syncValBlocks(); markSelected(this)">
+    <label class="opt"><input type="radio" name="w-type" value="two_means" onchange="P.type=this.value; syncValBlocks(); markSelected(this); setTimeout(next, 180)">
       <b>两组的评分或测量值平均数</b>
       <small>例如：两组的疼痛评分（VAS）、血糖值、住院天数平均差多少</small></label>
-    <label class="opt"><input type="radio" name="w-type" value="noninferiority" onchange="P.type=this.value; syncValBlocks(); markSelected(this)">
+    <label class="opt"><input type="radio" name="w-type" value="noninferiority" onchange="P.type=this.value; syncValBlocks(); markSelected(this); setTimeout(next, 180)">
       <b>新方法不比旧方法差太多就行</b>
       <small>例如：想证明短疗程和标准疗程效果相当（只要求"不更差"，不要求"更好"）</small></label>
-    <label class="opt"><input type="radio" name="w-type" value="tost" onchange="P.type=this.value; syncValBlocks(); markSelected(this)">
+    <label class="opt"><input type="radio" name="w-type" value="tost" onchange="P.type=this.value; syncValBlocks(); markSelected(this); setTimeout(next, 180)">
       <b>两种方法效果一样</b>
       <small>例如：想证明仿制药和原研药效果等效（要求"既不更好也不更差"）</small></label>
-    <label class="opt"><input type="radio" name="w-type" value="auc_ci" onchange="P.type=this.value; syncValBlocks(); markSelected(this)">
+    <label class="opt"><input type="radio" name="w-type" value="auc_ci" onchange="P.type=this.value; syncValBlocks(); markSelected(this); setTimeout(next, 180)">
       <b>一项诊断检查有多准</b>
       <small>例如：某个评分量表预测躁动的准确度（AUC）要测多精确</small></label>
-    <label class="opt"><input type="radio" name="w-type" value="correlation" onchange="P.type=this.value; syncValBlocks(); markSelected(this)">
+    <label class="opt"><input type="radio" name="w-type" value="correlation" onchange="P.type=this.value; syncValBlocks(); markSelected(this); setTimeout(next, 180)">
       <b>两个指标之间有没有关联</b>
       <small>例如：麻醉深度和术后认知变化之间是否相关</small></label>
   </section>
@@ -149,7 +149,7 @@
 </main>
 
 <footer>样本量设计器 · <span id="app-version">…</span> · 计算结果供设计参考，最终样本量辩护归统计师</footer>
-<script src="assets/calc-engine.js?v=8"></script>
+<script src="assets/calc-engine.js?v=9"></script>
 <script src="assets/version.js"></script>
 </body>
 </html>
