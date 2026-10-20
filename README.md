@@ -38,6 +38,11 @@ sample_size.py（6公式计算书）与 render_protocol.py（answers.json→方�
 - GitHub Pages未启用（本地服务器部署替代）
 - 更新流程：改 /root/workspace/medical-ethics → git commit+push → cp到 /www/wwwroot/medical-ethics/
 
+## 功能
+
+- **随便聊聊**：AI 引导员对话式采集要素，生成研究方案 + 知情同意书
+- **样本量设计器**：五步引导式向导（从"想比较什么"到"需要多少例"），含敏感性矩阵与参数曲线，纯前端离线可用
+
 ## 适用范围 (1020更新)
 
 面向**医学全学科**通用（内科/外科/妇产/儿科/麻醉/肿瘤/神经/精神等），不限于麻醉学。

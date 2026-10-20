@@ -1,0 +1,230 @@
+/* calc.js — 引导式样本量设计器(1020施主定稿: 五步向导+可视化)
+   引擎复用app.js的zQuant/z1/z2与6公式, 纯前端无依赖 */
+function zQuant(p) {           /* 正态分位数(有理逼近, Acklam算法简化) */
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+  const plow = 0.02425, phigh = 1 - plow;
+  let q, r;
+  if (p < plow) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+d[4]); }
+  if (p > phigh) { q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+d[4]); }
+  q = p - 0.5; r = q * q;
+  return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q /
+         (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+const z1 = p => zQuant(p);                          // 单侧分位
+const z2 = alpha => zQuant(1 - alpha / 2);          // 双侧
+
+
+
+/* ===== 公式引擎(纯函数, 从app.js doCalc抽取) ===== */
+function calcN(type, p) {
+  // p: {p1,p2,delta,sd,auc,ciWidth,r,alpha,power,tails,dropout}
+  const alpha = p.alpha, power = p.power;
+  const za2 = z2(alpha), za1 = z1(1 - alpha), zb = z1(power);
+  const tails = p.tails || 2;
+  let n = 0, formula = "", unit = "group";
+  if (type === "two_proportions") {
+    const p1 = p.p1, p2 = p.p2;
+    const za_ = tails === 1 ? za1 : za2;
+    const pb = (p1 + p2) / 2;
+    n = Math.ceil((za_ * Math.sqrt(2 * pb * (1 - pb)) + zb * Math.sqrt(p1*(1-p1) + p2*(1-p2))) ** 2 / (p1-p2) ** 2);
+    formula = "两组率比较";
+  } else if (type === "two_means") {
+    const za_ = tails === 1 ? za1 : za2;
+    n = Math.ceil(2 * ((za_ + zb) * p.sd / p.delta) ** 2);
+    formula = "两组均值比较";
+  } else if (type === "noninferiority") {
+    n = Math.ceil(2 * ((za1 + zb) * p.sd / Math.abs(p.delta)) ** 2);
+    formula = "非劣效设计(单侧)";
+  } else if (type === "tost") {
+    n = Math.ceil(2 * ((za2 + zb) * p.sd / Math.abs(p.delta)) ** 2);
+    formula = "等效性设计(TOST)";
+  } else if (type === "auc_ci") {
+    const se = p.ciWidth / (2 * za2);
+    n = Math.ceil(p.auc * (1 - p.auc) / (se ** 2));
+    formula = "诊断试验AUC置信区间";
+    unit = "total";
+  } else if (type === "correlation") {
+    const fz = 0.5 * Math.log((1 + p.r) / (1 - p.r));
+    n = Math.ceil(((za2 + zb) / fz) ** 2 + 3);
+    formula = "相关性分析(Fisher变换)";
+    unit = "total";
+  }
+  const dropout = p.dropout || 0;
+  const nFinal = dropout > 0 ? Math.ceil(n / (1 - dropout)) : n;
+  const total = unit === "total" ? nFinal : nFinal * 2;
+  return { n, nFinal, total, formula, unit };
+}
+
+/* ===== 向导状态 ===== */
+const STEPS5 = ["compare", "values", "strict", "reality", "result"];
+let cStep = 0;
+const P = { alpha: 0.05, power: 0.80, tails: 2, dropout: 0.20, ratio: 1 };
+
+function $(id) { return document.getElementById(id); }
+
+function syncValBlocks() {
+  const map = {
+    two_proportions: "vals-two_proportions",
+    two_means: "vals-two_means",
+    noninferiority: "vals-noninferiority",
+    tost: "vals-tost",
+    auc_ci: "vals-auc_ci",
+    correlation: "vals-correlation",
+  };
+  for (const [ty, id] of Object.entries(map)) {
+    const el = $(id);
+    if (el) el.hidden = P.type !== ty;
+  }
+  // 非劣效/等效的第2步输入id是c-delta2/c-sd2等, collectValues里按类型读对应id
+}
+function collectValues() {
+  if (P.type === "two_proportions") {
+    P.p1 = parseFloat($("c-p1").value) / 100;
+    P.p2 = parseFloat($("c-p2").value) / 100;
+  } else if (P.type === "two_means") {
+    P.delta = parseFloat($("c-delta").value);
+    P.sd = parseFloat($("c-sd").value);
+  } else if (P.type === "noninferiority") {
+    P.delta = parseFloat($("c-delta2").value);
+    P.sd = parseFloat($("c-sd2").value);
+  } else if (P.type === "tost") {
+    P.delta = parseFloat($("c-delta3").value);
+    P.sd = parseFloat($("c-sd3").value);
+  } else if (P.type === "auc_ci") {
+    P.auc = parseFloat($("c-auc").value);
+    P.ciWidth = parseFloat($("c-ciw").value);
+  } else if (P.type === "correlation") {
+    P.r = parseFloat($("c-r").value);
+  }
+}
+function showStep(n) {
+  cStep = n;
+  document.querySelectorAll(".wiz-step").forEach((el, i) => el.hidden = i !== n);
+  document.querySelectorAll(".wiz-dot").forEach((el, i) => el.classList.toggle("on", i <= n));
+  $("btn-prev").hidden = n === 0;
+  $("btn-next").hidden = n === STEPS5.length - 1;
+  if (STEPS5[n] === "result") renderResult();
+}
+
+function next() {
+  if (!validateStep(cStep)) return;
+  if (cStep === 1) collectValues();
+  if (cStep === 2) collectStrict();
+  if (cStep === 3) collectReality();
+  showStep(cStep + 1);
+}
+function prev() { showStep(cStep - 1); }
+
+function validateStep(n) {
+  if (STEPS5[n] === "compare" && !P.type) { alert("请先选择你要比较的内容"); return false; }
+  if (STEPS5[n] === "values") {
+    if (P.type === "two_proportions" && (!(P.p1 > 0 && P.p1 < 1) || !(P.p2 > 0 && P.p2 < 1) || P.p1 === P.p2)) {
+      alert("请填写两个不同的发生率（0～100%之间）"); return false;
+    }
+    if (["two_means","noninferiority","tost"].includes(P.type) && (!(P.delta > 0) || !(P.sd > 0))) {
+      alert("请填写预期差值和标准差（都要大于0）"); return false;
+    }
+    if (P.type === "auc_ci" && (!(P.auc > 0.5 && P.auc < 1) || !(P.ciWidth > 0 && P.ciWidth < 1))) {
+      alert("请填写AUC（0.5～1之间）和期望的置信区间宽度"); return false;
+    }
+    if (P.type === "correlation" && !(Math.abs(P.r) > 0 && Math.abs(P.r) < 1)) {
+      alert("请填写预期相关系数（-1～1之间，不为0）"); return false;
+    }
+  }
+  return true;
+}
+
+function collectStrict() {
+  P.alpha = parseFloat($("c-alpha").value);
+  P.power = parseFloat($("c-power").value);
+  P.tails = parseInt($("c-tails").value);
+}
+function collectReality() {
+  P.dropout = parseFloat($("c-dropout").value);
+  P.ratio = parseFloat($("c-ratio").value);
+}
+
+/* ===== 第5步: 结果渲染 ===== */
+function renderResult() {
+  const r = calcN(P.type, P);
+  $("result-big").textContent = P.type === "auc_ci" || P.type === "correlation"
+    ? r.total + " 例" : "每组 " + r.nFinal + " 例";
+  $("result-total").textContent = "研究共需 " + r.total + " 人" +
+    (P.dropout > 0 ? "（已含 " + Math.round(P.dropout*100) + "% 脱落余量）" : "");
+  $("result-formula").textContent = r.formula;
+
+  /* 敏感性矩阵: α × power */
+  const tbl = $("sens-table");
+  let html = "<tr><th>配置</th><th>每组例数</th><th>总例数</th></tr>";
+  const combos = [
+    ["α=0.05, 把握度80%", 0.05, 0.80],
+    ["α=0.05, 把握度90%", 0.05, 0.90],
+    ["α=0.01, 把握度80%", 0.01, 0.80],
+    ["α=0.01, 把握度90%", 0.01, 0.90],
+  ];
+  for (const [label, a, pw] of combos) {
+    const rr = calcN(P.type, {...P, alpha: a, power: pw, dropout: 0});
+    html += "<tr><td>" + label + "</td><td>" + rr.nFinal + "</td><td>" + rr.total + "</td></tr>";
+  }
+  tbl.innerHTML = html;
+
+  /* dropout梯度 */
+  const dtbl = $("dropout-table");
+  let dh = "<tr><th>脱落率</th><th>需招募（每组）</th></tr>";
+  for (const dd of [0, 0.10, 0.20, 0.30]) {
+    const rr = calcN(P.type, {...P, dropout: dd});
+    dh += "<tr><td>" + Math.round(dd*100) + "%</td><td>" + rr.nFinal + "</td></tr>";
+  }
+  dtbl.innerHTML = dh;
+
+  drawCurves();
+}
+
+/* ===== canvas曲线: n随δ(或p2)变化 ===== */
+function drawCurves() {
+  drawOne("canvas-delta", "delta");
+  drawOne("canvas-sd", "sd");
+}
+function drawOne(canvasId, vary) {
+  const cv = $(canvasId);
+  if (!cv) return;
+  const ctx = cv.getContext("2d");
+  const W = cv.width = cv.clientWidth * 2, H = cv.height = 360;
+  ctx.scale(1, 1);
+  ctx.clearRect(0, 0, W, H);
+  // 参数扫描
+  const pts = [];
+  for (let i = 1; i <= 40; i++) {
+    const f = i / 40;
+    const p2 = {...P};
+    if (vary === "delta") p2.delta = P.delta * (0.4 + f * 1.2);   // δ从40%到160%
+    else p2.sd = P.sd * (0.4 + f * 1.2);
+    const rr = calcN(P.type, p2);
+    pts.push({ x: f, n: rr.nFinal });
+  }
+  const nMax = Math.max(...pts.map(p => p.n));
+  const pad = { l: 70, r: 20, t: 30, b: 46 };
+  const px = f => pad.l + f * (W - pad.l - pad.r);
+  const py = n => H - pad.b - (n / nMax) * (H - pad.t - pad.b);
+  // 坐标轴
+  ctx.strokeStyle = "#dde4ea"; ctx.fillStyle = "#6b7885"; ctx.font = "20px sans-serif";
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, H-pad.b); ctx.lineTo(W-pad.r, H-pad.b); ctx.stroke();
+  // 曲线
+  ctx.strokeStyle = "#2c5f8a"; ctx.lineWidth = 3; ctx.beginPath();
+  pts.forEach((p, i) => { const X = px(p.x), Y = py(p.n); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+  ctx.stroke();
+  // 当前点
+  const curF = vary === "delta" ? (1 - 0.4) / 1.2 : (1 - 0.4) / 1.2;
+  const curN = calcN(P.type, P).nFinal;
+  const cx = px(curF), cy = py(curN);
+  ctx.fillStyle = "#b04a3a"; ctx.beginPath(); ctx.arc(cx, cy, 7, 0, 7); ctx.fill();
+  ctx.fillStyle = "#24313c"; ctx.font = "24px sans-serif";
+  ctx.fillText("当前: " + curN + "例", Math.min(cx + 12, W - 140), cy - 10);
+  // 轴标
+  ctx.fillText("n", pad.l - 50, pad.t + 10);
+  const xlabel = vary === "delta" ? "预期差值δ（相对当前值的40%～160%）" : "标准差SD（相对当前值的40%～160%）";
+  ctx.fillText(xlabel, pad.l, H - 8);
+}
