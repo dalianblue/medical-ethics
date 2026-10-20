@@ -39,8 +39,18 @@ $in = json_decode(file_get_contents('php://input'), true);
 if (!isset($in['messages']) || !is_array($in['messages'])) {
     http_response_code(400); echo json_encode(['error' => 'messages required']); exit;
 }
+/* payload上限: 防超大文本烧上游token(60KB约3万汉字, 正常使用远低于此) */
+$totalLen = 0;
+foreach ($in['messages'] as $m) {
+    if (isset($m['content']) && is_string($m['content'])) $totalLen += strlen($m['content']);
+}
+if ($totalLen > 60000) {
+    http_response_code(413);
+    echo json_encode(['error' => '对话内容过长，请开启新对话后重试']);
+    exit;
+}
 
-/* ===== 服务端设计分类(每次代理调用都做, 成本≈0.0002美元) ===== */
+/* ===== 服务端设计分类(有实质内容时才做; 生成文书必然经过这里) ===== */
 $dialogText = '';
 foreach ($in['messages'] as $m) {
     if (isset($m['content']) && is_string($m['content'])) {
@@ -72,7 +82,7 @@ $clsRaw = ds_call(DEEPSEEK_KEY, [
     ['role' => 'system', 'content' => '你是研究设计分类器。判断对话中描述的医学研究设计类型。只输出JSON: {"design":"RCT|前瞻性队列|回顾性队列|病例对照|横断面|病例系列|其他观察性|未明确", "confidence":0到1}。注意:"随机分组困难/难以随机/无法随机"是反对RCT的信号, 不是支持RCT; 判断不清时design填"未明确"且confidence≤0.5。'],
     ['role' => 'user', 'content' => $dialogText],
 ]);
-if ($clsRaw) {
+if ($clsRaw && $totalLen > 400) {
     if (preg_match('/\{[\s\S]*\}/', $clsRaw, $mm)) {
         $cls = json_decode($mm[0], true);
         if ($cls && isset($cls['design'])) {

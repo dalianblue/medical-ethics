@@ -1,0 +1,25 @@
+#!/bin/bash
+# medical-ethics部署脚本(1020代码审查产出): 同步+版本对齐校验
+set -e
+SRC=/root/workspace/medical-ethics
+DST=/www/wwwroot/medical-ethics-web
+
+# 1. bump chat.js引用版本(若chat.js有未同步改动)
+GIT_HASH=$(git -C $SRC log -1 --format=%h -- assets/chat.js)
+DEPLOYED_HASH=$(md5sum $DST/assets/chat.js | cut -d' ' -f1)
+SRC_HASH=$(md5sum $SRC/assets/chat.js | cut -d' ' -f1)
+if [ "$DEPLOYED_HASH" != "$SRC_HASH" ]; then
+    # chat.js有变化→bump html引用
+    NEWV=$(( $(grep -oP 'chat\.js\?v=\K[0-9]+' $SRC/chat.html | head -1) + 1 ))
+    sed -i "s/chat\.js?v=[0-9]*/chat.js?v=$NEWV/g" $SRC/chat.html
+    echo "bumped chat.js引用→v$NEWV"
+fi
+
+# 2. 同步文件
+cp -f $SRC/index.html $SRC/chat.html $SRC/expert.html $DST/
+cp -f $SRC/assets/*.js $SRC/assets/*.css $DST/assets/
+chown -R www:www $DST
+
+# 3. 验证: html引用版本与chat.js md5记录
+echo "部署完成 $(date +%H:%M:%S)"
+grep -o "chat.js?v=[0-9]*" $DST/chat.html

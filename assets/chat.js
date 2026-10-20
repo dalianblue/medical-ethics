@@ -199,8 +199,10 @@ function escapeHtml(s) {
 }
 function renderMd(text) {
   /* 先转义HTML防XSS, 再用marked渲染markdown。
-     单个波浪号保护为实体: 防GFM把"3~6分...1~2分"两个~误配对成删除线(medical数字范围高频) */
-  return marked.parse(escapeHtml(text).replace(/~(?!~)/g, "&#732;"));
+     单个波浪号保护为实体: 防GFM把"3~6分...1~2分"两个~误配对成删除线(medical数字范围高频)。
+     渲染后清洗: 链接href只允许http(s)——防[文字](javascript:...)注入 */
+  const html = marked.parse(escapeHtml(text).replace(/~(?!~)/g, "&#732;"));
+  return html.replace(/href\s*=\s*["']?(?!https?:)[^"'>\s]*/gi, 'href="#"');
 }
 function bubble(role, text, isHtml) {
   const row = document.createElement("div");
@@ -273,6 +275,9 @@ async function send() {
                      : e.message === "NOKEY" ? "⚠ 请先在首页⚙填写 DeepSeek API Key"
                      : e.message === "RATE" ? "⚠ 本小时使用次数已达上限（60次/时/IP），请下个整点再试，或在首页⚙填入自己的 DeepSeek Key"
                      : "⚠ 网络异常：" + e.message + "，请重试");
+  } finally {
+    _sending = false;
+    $("btn-chat-send").disabled = false;
   }
 }
 
@@ -474,11 +479,13 @@ function downloadMd(name, text) {
     return;
   }
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+  const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+  a.href = url;
   a.download = name;
   document.body.appendChild(a);
   a.click();
   a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 function showCopyModal(name, text) {
   let ov = document.getElementById("copy-modal");
