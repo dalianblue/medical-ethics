@@ -53,6 +53,13 @@
         <input type="number" id="c-p2" placeholder="如 3" min="0" max="100" step="0.1"></label>
     </div>
     <div id="vals-two_means" class="vals" hidden>
+      <label>这项研究的主要指标是什么？
+        <input type="text" id="m-tm" placeholder="如：收缩压 / 心率 / VAS疼痛评分" list="metric-list-m-tm" oninput="onMetricInput('m-tm','c-delta-u','c-sd-u')">
+        <datalist id="metric-list-m-tm">
+          <option value="收缩压（mmHg）"><option value="舒张压（mmHg）"><option value="心率（次/分）">
+          <option value="VAS疼痛评分（分）"><option value="白细胞计数（×10⁹/L）"><option value="血糖（mmol/L）">
+          <option value="住院天数（天）"><option value="体重（kg）">
+        </datalist></label>
       <label>两组预期相差多少（差值）
         <span class="inp-unit"><input type="number" id="c-delta" placeholder="如 2.5" min="0" step="0.1"><input type="text" class="unit-in" id="c-delta-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
       <label>个体之间测量值的波动大小（标准差）
@@ -60,12 +67,26 @@
       <p class="wiz-hint">不知道波动大小？同类研究常取 1～3，也可以先填一个试试。</p>
     </div>
     <div id="vals-noninferiority" class="vals" hidden>
+      <label>这项研究的主要指标是什么？
+        <input type="text" id="m-ni" placeholder="如：收缩压 / 心率 / VAS疼痛评分" list="metric-list-m-ni" oninput="onMetricInput('m-ni','c-delta2-u','c-sd2-u')">
+        <datalist id="metric-list-m-ni">
+          <option value="收缩压（mmHg）"><option value="舒张压（mmHg）"><option value="心率（次/分）">
+          <option value="VAS疼痛评分（分）"><option value="白细胞计数（×10⁹/L）"><option value="血糖（mmol/L）">
+          <option value="住院天数（天）"><option value="体重（kg）">
+        </datalist></label>
       <label>能接受的最大差距（比旧方法差多少仍算合格）
         <span class="inp-unit"><input type="number" id="c-delta2" placeholder="如 0.5" min="0" step="0.1"><input type="text" class="unit-in" id="c-delta2-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
       <label>测量值的波动大小（标准差）
         <span class="inp-unit"><input type="number" id="c-sd2" placeholder="如 2" min="0" step="0.1"><input type="text" class="unit-in" id="c-sd2-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
     </div>
     <div id="vals-tost" class="vals" hidden>
+      <label>这项研究的主要指标是什么？
+        <input type="text" id="m-tost" placeholder="如：收缩压 / 心率 / VAS疼痛评分" list="metric-list-m-tost" oninput="onMetricInput('m-tost','c-delta3-u','c-sd3-u')">
+        <datalist id="metric-list-m-tost">
+          <option value="收缩压（mmHg）"><option value="舒张压（mmHg）"><option value="心率（次/分）">
+          <option value="VAS疼痛评分（分）"><option value="白细胞计数（×10⁹/L）"><option value="血糖（mmol/L）">
+          <option value="住院天数（天）"><option value="体重（kg）">
+        </datalist></label>
       <label>等效允许的差距范围（±多少以内算一样）
         <span class="inp-unit"><input type="number" id="c-delta3" placeholder="如 0.5" min="0" step="0.1"><input type="text" class="unit-in" id="c-delta3-u" placeholder="分/mmHg/%" title="填写单位"></span></label>
       <label>测量值的波动大小（标准差）
@@ -149,7 +170,7 @@
 </main>
 
 <footer>样本量设计器 · <span id="app-version">…</span> · 计算结果供设计参考，最终样本量辩护归统计师</footer>
-<script src="assets/calc-engine.js?v=9"></script>
+<script src="assets/calc-engine.js?v=10"></script>
 <script src="assets/version.js"></script>
 </body>
 </html>

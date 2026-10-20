@@ -68,6 +68,27 @@ const P = { alpha: 0.05, power: 0.80, tails: 2, dropout: 0.20, ratio: 1 };
 
 function $(id) { return document.getElementById(id); }
 
+const METRIC_UNIT = {
+  "血压": "mmHg", "收缩压": "mmHg", "舒张压": "mmHg",
+  "心率": "次/分", "评分": "分", "VAS": "分", "疼痛评分": "分",
+  "白细胞": "×10⁹/L", "血糖": "mmol/L", "住院": "天", "体重": "kg",
+  "血红蛋白": "g/L", "血氧": "%",
+};
+function metricToUnit(name) {
+  if (!name) return "";
+  for (const [kw, u] of Object.entries(METRIC_UNIT)) {
+    if (name.includes(kw)) return u;
+  }
+  return "";
+}
+function onMetricInput(mid, deltaUid, sdUid) {
+  const name = $(mid).value || "";
+  const u = metricToUnit(name);
+  if (u) {
+    if ($(deltaUid)) $(deltaUid).value = u;
+    if ($(sdUid)) $(sdUid).value = u;
+  }
+}
 function syncValBlocks() {
   /* 切换类型: 清空全部参数输入, 防旧值残留误导(1020施主卡第2步的场景) */
   document.querySelectorAll("#vals-two_proportions input, #vals-two_means input, #vals-noninferiority input, #vals-tost input, #vals-auc_ci input, #vals-correlation input").forEach(el => el.value = "");
@@ -135,8 +156,9 @@ function showStep(n) {
 
 function next() {
   /* 先采集再校验(1020施主填0.4仍被拦: 原顺序validate读的是旧值/undefined) */
-  if (cStep === 1) collectValues();
+  if (cStep === 1) { collectValues(); collectMetric(); }
   if (cStep === 2) collectStrict();
+  if (cStep === 2 && P.metric === undefined) collectMetric();
   if (cStep === 3) collectReality();
   if (!validateStep(cStep)) return;
   showStep(cStep + 1);
@@ -166,6 +188,13 @@ function collectStrict() {
   P.alpha = parseFloat($("c-alpha").value);
   P.power = parseFloat($("c-power").value);
   P.tails = parseInt($("c-tails").value);
+}
+function collectMetric() {
+  const map = { two_means: ["m-tm","c-delta-u","c-sd-u"],
+                noninferiority: ["m-ni","c-delta2-u","c-sd2-u"],
+                tost: ["m-tost","c-delta3-u","c-sd3-u"] };
+  const cfg = map[P.type];
+  if (cfg) { P.metric = $(cfg[0]).value.trim(); }
 }
 function collectReality() {
   P.dropout = parseFloat($("c-dropout").value);
@@ -231,11 +260,11 @@ function buildSummary() {
   const lines = {
     two_proportions: "样本量估算：本研究为两组率的比较，预期对照组事件发生率为 " + Math.round(P.p1*100) + "%、试验组为 " + Math.round(P.p2*100) + "%，" +
       "采用双侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
-    two_means: "样本量估算：本研究为两组均数的比较，预期两组差值 δ=" + P.delta + " " + P.deltaUnit + "、标准差 SD=" + P.sd + " " + P.sdUnit + "，" +
+    two_means: "样本量估算：本研究为两组均数的比较，预期两组' + (P.metric || '主要指标') + '差值 δ=" + P.delta + " " + P.deltaUnit + "、标准差 SD=" + P.sd + " " + P.sdUnit + "，" +
       "采用" + (P.tails === 1 ? "单侧" : "双侧") + "检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
-    noninferiority: "样本量估算：本研究采用非劣效设计，非劣效界值 Δ=" + P.delta + " " + P.deltaUnit + "、标准差 SD=" + P.sd + " " + P.sdUnit + "，" +
+    noninferiority: "样本量估算：本研究采用非劣效设计，主要指标（' + (P.metric || '待补充') + '）的非劣效界值 Δ=" + P.delta + " " + P.deltaUnit + "、标准差 SD=" + P.sd + " " + P.sdUnit + "，" +
       "单侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
-    tost: "样本量估算：本研究采用等效性设计（TOST），等效界值 Δ=" + P.delta + " " + P.deltaUnit + "、标准差 SD=" + P.sd + " " + P.sdUnit + "，" +
+    tost: "样本量估算：本研究采用等效性设计（TOST），主要指标（' + (P.metric || '待补充') + '）的等效界值 Δ=" + P.delta + " " + P.deltaUnit + "、标准差 SD=" + P.sd + " " + P.sdUnit + "，" +
       "双侧检验（α=" + P.alpha + "）、把握度 " + Math.round(P.power*100) + "%，经计算每组需 " + r.n + " 例" + dropTxt + "，两组共需 " + r.total + " 例。",
     auc_ci: "样本量估算：本研究为诊断准确性试验，预期 AUC=" + P.auc + "，期望置信区间宽度 " + P.ciWidth + "（α=" + P.alpha + "），经计算需纳入 " + r.total + " 例受试者。",
     correlation: "样本量估算：本研究为相关性分析，预期相关系数 r=" + P.r + "，" +
