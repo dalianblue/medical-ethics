@@ -16,6 +16,7 @@ const STAGES = [
 ];
 
 let stage = localStorage.getItem(STAGE_LS) || "idea";
+let _ready = stage === "generate";
 let history = JSON.parse(localStorage.getItem(HISTORY_LS) || "[]");
 
 const sysPrompt = `你是医学研究伦理申请的引导员，帮助临床研究者把模糊的想法整理成合格的伦理申请材料。
@@ -26,7 +27,14 @@ const sysPrompt = `你是医学研究伦理申请的引导员，帮助临床研�
 3.enroll：收集纳入标准、排除标准（引导用户逐条说，你整理成规范表述——按CT.gov资格标准结构：年龄/性别/病种与分期/合并症/安全排除项如器官功能与禁忌用药）
 4.sample：收集主要结局时按CT.gov三要素引导——结局名称（不用缩写）+用什么量表或方法测量+在什么时间点测（如"术后24小时用VAS测疼痛"）。缺任一要素就追问。次要结局同样三要素。然后建议样本量计算方法（两率比较/均值比较/非劣效/TOST/AUC CI宽度/相关性），帮助估算样本量（如用户给了参数请直接计算给出数字）
 5.ethics：知情同意方式（签署同意书 or 豁免——豁免需用户给出至少3条论证理由，你来帮他完善表述）
-6.generate：信息齐全后输出总结，并提示"点击下方按钮生成文书"
+6.generate：信息齐全后输出全部要素总结清单
+
+【阶段推进规则——最重要】
+每轮回复最末行单独成行输出标记：
+- 本阶段关键信息未收集完 → [STAGE:当前阶段id]，继续追问
+- 本阶段已齐进入下一阶段 → [STAGE:下一阶段id]
+- 六项全齐（类型/纳排/结局三要素/样本量/知情同意方式）→ [READY]，此时才提示"可生成文书"
+不确定就不推进，宁可多问一轮。标记必须独立成行在最后。
 
 要求：
 - 中文回答，口语化、鼓励式，每次回复≤200字
@@ -265,10 +273,21 @@ async function send() {
   bubble("user", q);
   const pend = bubble("ai", "…");
   try {
-    const answer = await deepseek(history);
+    let answer = await deepseek(history);
+    const markM = answer.match(/\[STAGE:([a-z]+)\]|\[READY\]\s*$/i);
+    answer = answer.replace(/\n?\[(?:STAGE:[a-z]+|READY)\]\s*$/i, "").trim();
     pend.innerHTML = renderMd(answer);
     history.push({ role: "assistant", content: answer });
-    nextStage();
+    if (markM) {
+      if (/READY/i.test(markM[0])) { stage = "generate"; _ready = true; }
+      else {
+        const nid = markM[0].match(/STAGE:([a-z]+)/i)[1];
+        if (STAGES.some(s => s.id === nid)) stage = nid;
+      }
+      localStorage.setItem(STAGE_LS, stage);
+      $("stage-chip").textContent = "阶段：" + stageName();
+      if (typeof refreshGenBar === "function") refreshGenBar();
+    }
     saveHist();
   } catch (e) {
     pend.innerHTML = renderMd(e.message === "KEYBAD" ? "⚠ API Key 无效，请到首页⚙重新填写"
@@ -283,7 +302,7 @@ async function send() {
 
 /* ===== 生成文书(generate阶段) ===== */
 function refreshGenBar() {
-  $("gen-bar").hidden = stage !== "generate";
+  $("gen-bar").hidden = !(stage === "generate" && _ready);
 }
 const GEN_SYS = `你是一名精通临床医学与临床研究方法学的医学科学家，覆盖各专科（内科/外科/妇产/儿科/麻醉/肿瘤/神经/精神等），长期从事医学研究方案设计、临床试验注册规范（WHO TRDS与ClinicalTrials.gov标准）与伦理申报，熟知：手术入路互斥分类（经尿道/腹腔镜/开放切口不得混列）、药物通用名规范（禁用商品名）、结局指标三要素（名称不含缩写+测量方法+时间点）、研究设计分类（RCT/队列/病例对照/横断面按证据等级与因果论证强度严格区分）。你现在的任务：产出**直接可提交伦理委员会的完整文书**（参照三甲医院IIT过会方案标准），不是提纲。
 
