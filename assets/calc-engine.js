@@ -122,10 +122,11 @@ function showStep(n) {
 }
 
 function next() {
-  if (!validateStep(cStep)) return;
+  /* 先采集再校验(1020施主填0.4仍被拦: 原顺序validate读的是旧值/undefined) */
   if (cStep === 1) collectValues();
   if (cStep === 2) collectStrict();
   if (cStep === 3) collectReality();
+  if (!validateStep(cStep)) return;
   showStep(cStep + 1);
 }
 function prev() { showStep(cStep - 1); }
