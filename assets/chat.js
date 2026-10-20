@@ -118,6 +118,61 @@ async function designBlockAsync(historyArr) {
   return "\n【设计确认——最高优先级，机器判定置信度" + cls.confidence.toFixed(2) + "】本研究设计类型是: " + cls.design
        + "\n全文所有章节必须与此设计一致。设计确认优先于本提示词中的任何章节模板要求：模板中不适用于该设计的章节要素（如队列研究的随机化/盲法）必须整体省略，不得改写后塞入。\n";
 }
+/* CT.gov同类研究范本(1020施主令): 生成前拉真实注册研究作参照 */
+function extractKeywords(text) {
+  const t = text || "";
+  const kws = [];
+  /* 中→英映射表(CT.gov库是英文, 中文直查0命中——1020实测) */
+  const ZH2EN = {
+    "前列腺切除": "prostatectomy", "前列腺癌": "prostate cancer",
+    "腹腔镜": "laparoscopic", "经尿道": "transurethral",
+    "骶麻": "caudal block", "骶管阻滞": "caudal block",
+    "椎管内": "neuraxial", "硬膜外": "epidural", "腰麻": "spinal anesthesia",
+    "全身麻醉": "general anesthesia", "全麻": "general anesthesia",
+    "躁动": "emergence agitation", "谵妄": "delirium",
+    "术后疼痛": "postoperative pain", "恶心呕吐": "postoperative nausea vomiting",
+    "低血压": "hypotension", "糖尿病": "diabetes mellitus",
+    "高血压": "hypertension", "冠心病": "coronary artery disease",
+    "剖宫产": "cesarean delivery", "日间手术": "ambulatory surgery",
+  };
+  for (const [zh, en] of Object.entries(ZH2EN)) {
+    if (t.includes(zh)) kws.push(en);
+  }
+  const e = t.match(/[A-Za-z]{4,}(?: syndrome| block| inhibitors?| cancer|ectomy)/gi);
+  if (e) kws.push(...e.map(x => x.toLowerCase()).slice(0, 2));
+  return [...new Set(kws)].slice(0, 3);
+}
+async function fetchSimilarTrials(historyArr) {
+  const joined = historyArr.map(m => m.content).join(" ");
+  const kws = extractKeywords(joined);
+  if (!kws.length) return "";
+  try {
+    const q = encodeURIComponent(kws.join(" OR "));
+    const url = "https://clinicaltrials.gov/api/v2/studies?query.cond=" + q
+      + "&pageSize=3&fields=NCTId,BriefTitle,DesignModule,OutcomesModule,ArmsInterventionsModule";
+    const r = await fetch(url);
+    if (!r.ok) return "";
+    const d = await r.json();
+    const studies = (d.studies || []).slice(0, 3);
+    if (!studies.length) return "";
+    let s = "\n【CT.gov同类注册研究范本】以下为真实注册研究的设计骨架, 参考其结构与措辞规范(数据不照抄, 只学结构):\n";
+    for (const st of studies) {
+      const p = st.protocolSection || {};
+      const dm = p.designModule || {};
+      const om = p.outcomesModule || {};
+      const ai = p.armsInterventionsModule || {};
+      s += "\n■ " + (p.identificationModule || {}).nctId + ": " + ((p.identificationModule || {}).briefTitle || "").slice(0, 60) + "\n";
+      if (dm.studyType) s += "  设计: " + dm.studyType + (dm.designInfo && dm.designInfo.allocation ? "/" + dm.designInfo.allocation : "") + "\n";
+      if (ai.armGroups) s += "  分组: " + ai.armGroups.map(a => a.label).slice(0, 3).join(" vs ").slice(0, 100) + "\n";
+      const po = (om.primaryOutcomes || [])[0];
+      if (po) s += "  主结局: " + po.measure + " | " + (po.timeFrame || "") + "\n";
+    }
+    s += "\n参照以上范本的规范程度输出, 但研究内容以用户对话为准。\n";
+    return s;
+  } catch (e) {
+    return "";  // CT.gov不可达时静默跳过(不阻塞生成)
+  }
+}
 function riskContextBlock(text) {
   const topics = matchRiskTopics(text);
   if (!topics.length) return "";
@@ -283,7 +338,7 @@ async function generateDocs() {
     const body = {
       model: "deepseek-chat", temperature: 0.3,
       messages: [
-        { role: "system", content: GEN_SYS + (await designBlockAsync(history)) + riskContextBlock(history.map(m => m.content).join(" ")) },
+        { role: "system", content: GEN_SYS + (await designBlockAsync(history)) + (await fetchSimilarTrials(history)) + riskContextBlock(history.map(m => m.content).join(" ")) },
         ...history.slice(-30),
       ],
     };
