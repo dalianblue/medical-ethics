@@ -440,6 +440,13 @@ function showCopyModal(name, text) {
 }
 $("btn-gen").addEventListener("click", generateDocs);
 
+/* 开启新的对话: 清空历史与阶段, 重新开始 */
+$("btn-newchat").onclick = () => {
+  if (!confirm("开启新的对话？当前对话记录将被清除。")) return;
+  localStorage.removeItem(HISTORY_LS);
+  localStorage.removeItem(STAGE_LS);
+  location.reload();
+};
 $("btn-chat-send").onclick = send;
 $("chat-input").addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }

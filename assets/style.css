@@ -216,3 +216,7 @@ footer a { color: var(--accent); }
 .gen-bar { padding: 2px 0 10px; text-align: center; }
 .gen-btn { width: 100%; padding: 12px; font-size: 15px; border-radius: 12px; }
 .gen-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+.newchat-btn { background: rgba(255,255,255,.15); border: none; color: #fff;
+  font-size: 12px; padding: 5px 12px; border-radius: 99px; cursor: pointer; flex-shrink: 0; }
+.newchat-btn:active { background: rgba(255,255,255,.35); }
