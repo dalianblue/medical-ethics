@@ -204,13 +204,16 @@ function nextStage() {
 
 /* ===== UI ===== */
 function isNearBottom() {
-  const el = $("chat-history");
+  const el = document.querySelector(".chat-main");
   return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
 }
 function scrollToBottom() {
-  const el = $("chat-history");
+  const el = document.querySelector(".chat-main");
   el.scrollTop = el.scrollHeight;
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });  /* 渲染/字体回流后再钉一次 */
 }
+/* 1020修复: 滚动容器是.chat-main(overflow-y:auto); 旧代码操作#chat-history,
+   它是display:contents无盒子→scrollHeight/scrollTop恒0→自动滚底从未生效, 施主要手动下滑才能看到AI回复 */
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -552,6 +555,7 @@ $("btn-newchat").onclick = () => {
 };
 $("btn-chat-send").onclick = send;
 $("chat-input").addEventListener("keydown", e => {
+  if (e.isComposing || e.keyCode === 229) return;  /* IME组合态: 回车=确认候选词(如PACU), 不是发送(1020施主反馈) */
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
 });
 
