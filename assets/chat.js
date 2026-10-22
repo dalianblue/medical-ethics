@@ -391,7 +391,7 @@ async function send() {
   } catch (e) {
     pend.innerHTML = renderMd(e.message === "KEYBAD" ? "⚠ API Key 无效，请到首页⚙重新填写"
                      : e.message === "NOKEY" ? "⚠ 请先在首页⚙填写 DeepSeek API Key"
-                     : e.message === "RATE" ? "⚠ 今日免费额度已用完（15次/天）。可在首页⚙填入你自己的 DeepSeek Key 继续聊天（不限量）；样本量设计器无需 Key，全功能可用。明日自动重置。"
+                     : e.message === "RATE" ? "⚠ 今日免费额度已用完（25次/天）。可在首页⚙填入你自己的 DeepSeek Key 继续聊天（不限量）；样本量设计器无需 Key，全功能可用。明日自动重置。"
                      : e.message === "NOPROXY" ? "⚠ 当前是纯静态部署（如 GitHub Pages），没有 AI 代理通道。请到首页⚙填入你自己的 DeepSeek Key 后使用聊天功能；样本量设计器无需 Key，全功能可用。"
                      : "⚠ 网络异常：" + e.message + "，请重试");
   } finally {
