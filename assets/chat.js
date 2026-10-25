@@ -91,11 +91,8 @@ async function classifyDesign(historyArr) {
         body: JSON.stringify({ model: "deepseek-chat", temperature: 0, max_tokens: 100, messages: msgs }),
       });
     } else {
-      r = await fetch("/api/me/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "deepseek-chat", max_tokens: 100, messages: msgs }),
-      });
+      /* 1025: 平台通道停用, 无key跳过设计分类(不影响主流程) */
+      return { design: "未明确", confidence: 0 };
     }
     if (!r.ok) throw new Error("api");
     const txt = (await r.json()).choices[0].message.content;
@@ -343,15 +340,8 @@ async function deepseek(messages) {
       }),
     });
   } else {
-    r = await fetch("/api/me/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [{ role: "system", content: sysPrompt + `\n当前阶段：${stageName()}（${stage}）` + riskContextBlock(messages.map(m => m.content).join(" ")) },
-                   ...messages],
-      }),
-    });
+    /* 1025施主令: 平台预置通道停用, 无key即刻引导自填(不再发代理请求) */
+    throw new Error("NOKEY");
   }
   if (r.status === 401) throw new Error("KEYBAD");
   if (r.status === 429) throw new Error("RATE");
